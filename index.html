@@ -606,6 +606,11 @@ const Utils = {
     return 'R$ ' + n.toFixed(0);
   },
   today: () => new Date().toISOString().slice(0,10),
+  fmtDate: (iso) => {
+    if(!iso || iso === '—') return '—';
+    const p = iso.slice(0,10).split('-');
+    return p[2]+'/'+p[1]+'/'+p[0];
+  },
   monthKey: (d) => (d || new Date().toISOString()).slice(0,7),
   dayOfMonth: (d) => new Date(d+'T12:00:00').getDate(),
   monthName: (m) => ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][m],
@@ -914,7 +919,7 @@ Router.register('dashboard', () => {
         </div>
         ${proj.map(p=>`
           <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
-            <span style="font-size:12px;color:var(--text2)">Em ${p.days} dias</span>
+            <span style="font-size:12px;color:var(--text2)">Em ${p.days} dias <span style="color:var(--text3);font-size:11px">(${Utils.fmtDate(p.date)})</span></span>
             <span class="font-mono ${p.balance>=0?'text-green':'text-red'}" style="font-size:14px">${Utils.fmt(p.balance)}</span>
           </div>
         `).join('')}
@@ -949,7 +954,7 @@ Router.register('dashboard', () => {
             <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
               <div>
                 <div style="font-size:13px">${t.description}</div>
-                <div style="font-size:11px;color:var(--text3)">${t.category} · ${t.date}</div>
+                <div style="font-size:11px;color:var(--text3)">${t.category} · ${Utils.fmtDate(t.date)}</div>
               </div>
               <span class="font-mono ${t.type==='entrada'?'text-green':'text-red'}" style="font-size:13px">
                 ${t.type==='entrada'?'+':'-'}${Utils.fmtShort(t.amount)}
@@ -1006,7 +1011,7 @@ Router.register('transactions', () => {
         ${sorted.length === 0 ? `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3)">Nenhuma transação. Clique em + Novo para começar.</td></tr>` :
           sorted.map(t=>`
             <tr>
-              <td class="font-mono" style="font-size:12px">${t.date}</td>
+              <td class="font-mono" style="font-size:12px">${Utils.fmtDate(t.date)}</td>
               <td>${t.description}</td>
               <td><span class="chip chip-gray">${t.category}</span></td>
               <td><span class="chip ${t.type==='entrada'?'chip-green':'chip-red'}">${t.type==='entrada'?'↑ Entrada':'↓ Saída'}</span></td>
@@ -1233,7 +1238,7 @@ Router.register('subscriptions', () => {
           subs.map(s=>`<tr>
             <td>${s.icon||'📦'} <strong>${s.name}</strong></td>
             <td class="font-mono">${Utils.fmt(s.amount)}</td>
-            <td>${s.renewalDate}</td>
+            <td>${Utils.fmtDate(s.renewalDate)}</td>
             <td><span class="chip chip-blue">${s.frequency}</span></td>
             <td>
               <button class="icon-btn" onclick="deleteSubscription('${s.id}')">🗑️</button>
@@ -1541,7 +1546,7 @@ function showCalDayDetail(date) {
 
   const d = new Date(date + 'T12:00:00');
   const weekDay = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'][d.getDay()];
-  const dayFmt  = `${weekDay}, ${d.getDate()} de ${['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][d.getMonth()]} de ${d.getFullYear()}`;
+  const dayFmt = `${weekDay}, ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 
   Modal.open(`<div class="modal modal-lg">
     <div class="modal-title">📅 ${dayFmt}</div>
@@ -1594,7 +1599,7 @@ Router.register('fixed-bills', () => {
             return `<tr>
               <td>${b.icon||'🏦'} <strong>${b.name}</strong></td>
               <td class="font-mono">${Utils.fmt(b.amount)}</td>
-              <td>${b.dueDate}</td>
+              <td>${Utils.fmtDate(b.dueDate)}</td>
               <td><span class="chip chip-gray">${b.repeat}</span></td>
               <td><span class="chip ${chipClass}">${chipLabel}</span></td>
               <td class="flex gap4">
@@ -1731,8 +1736,8 @@ Router.register('clients', () => {
               <td><strong>${c.name}</strong></td>
               <td style="color:var(--text2)">${c.service||'—'}</td>
               <td class="font-mono">${Utils.fmt(c.amount)}</td>
-              <td>${c.expectedDate||'—'}</td>
-              <td>${c.paidDate||'—'}</td>
+              <td>${Utils.fmtDate(c.expectedDate)}</td>
+              <td>${Utils.fmtDate(c.paidDate)}</td>
               <td><span class="chip ${statusChip[st]||'chip-gray'}">${statusIcon[st]||'❓'} ${st}</span></td>
               <td class="flex gap4">
                 ${st!=='pago'?`<button class="btn btn-primary btn-xs" onclick="markClientPaid('${c.id}')">✓ Pago</button>`:''}
@@ -1767,7 +1772,7 @@ Router.register('goals', () => {
             <div class="card-header">
               <div>
                 <div style="font-size:17px">${g.icon||'🎯'} <strong>${g.name}</strong></div>
-                ${g.deadline?`<div style="font-size:11px;color:var(--text3)">${daysLeft!==null?(daysLeft>0?daysLeft+' dias restantes':daysLeft===0?'Hoje!':'Vencida'):''}  · ${g.deadline}</div>`:''}
+                ${g.deadline?`<div style="font-size:11px;color:var(--text3)">${daysLeft!==null?(daysLeft>0?daysLeft+' dias restantes':daysLeft===0?'Hoje!':'Vencida'):''}  · ${Utils.fmtDate(g.deadline)}</div>`:''}
               </div>
               <div class="flex gap4">
                 <button class="icon-btn" onclick="addGoalProgress('${g.id}')">＋</button>
@@ -1948,43 +1953,95 @@ Router.register('backup', () => {
 // ═══════════════════════════════════════════════════
 // MODAL HANDLERS
 // ═══════════════════════════════════════════════════
-const CATEGORIES = ['Alimentação','Transporte','Moradia','Saúde','Lazer','Educação','Roupas','Compras','Internet','Energia','Água','Reserva','Cartão','Outros'];
+const CATEGORIES = window.CATEGORIES = ['Alimentação','Transporte','Moradia','Saúde','Lazer','Educação','Roupas','Compras','Internet','Energia','Água','Reserva','Cartão','Outros'];
 const ICONS = ['🏠','📱','⚡','💧','🚗','🛒','🎓','🏥','💳','📦','🎯','💰','📚','🌐','🎮','✈️','🍕'];
 
 const ModalHandlers = {
   'quick-add-modal'() {
-    Modal.open(`<div class="modal">
-      <div class="modal-title">＋ Novo Lançamento</div>
-      <div class="form-group">
-        <label class="form-label">Tipo</label>
-        <div class="flex gap8">
-          <button id="btn-entrada" class="btn btn-primary flex-1" onclick="selectTxType('entrada')">💚 Entrada</button>
-          <button id="btn-saida" class="btn btn-ghost flex-1" onclick="selectTxType('saida')">🔴 Saída</button>
-        </div>
-        <input type="hidden" id="tx-type" value="entrada">
+    Modal.open(`<div class="modal modal-lg">
+      <div class="modal-title">＋ Lançamentos</div>
+
+      <!-- ABAS -->
+      <div style="display:flex;gap:4px;background:var(--bg3);border-radius:14px;padding:5px;margin-bottom:20px;border:2px solid var(--border)">
+        <button id="tab-single" onclick="switchTxTab('single')"
+          style="flex:1;padding:9px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;background:var(--bg2);color:var(--text);border:2px solid var(--border)">
+          📝 Lançamento Único
+        </button>
+        <button id="tab-batch" onclick="switchTxTab('batch')"
+          style="flex:1;padding:9px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;background:transparent;color:var(--text2);border:2px solid transparent">
+          📋 Em Lote
+        </button>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Descrição</label><input class="form-input" id="tx-desc" placeholder="Ex: Salário, Aluguel..."></div>
-        <div class="form-group"><label class="form-label">Valor (R$)</label><input class="form-input" id="tx-amount" type="number" min="0" step="0.01" placeholder="0,00"></div>
-      </div>
-      <div class="form-row">
+
+      <!-- ÚNICO -->
+      <div id="panel-single">
         <div class="form-group">
-          <label class="form-label">Categoria</label>
-          <select class="form-input form-select" id="tx-cat">
-            ${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}
-          </select>
+          <label class="form-label">Tipo</label>
+          <div class="flex gap8">
+            <button id="btn-entrada" class="btn btn-primary flex-1" onclick="selectTxType('entrada')">💚 Entrada</button>
+            <button id="btn-saida" class="btn btn-ghost flex-1" onclick="selectTxType('saida')">🔴 Saída</button>
+          </div>
+          <input type="hidden" id="tx-type" value="entrada">
         </div>
-        <div class="form-group"><label class="form-label">Data</label><input class="form-input" id="tx-date" type="date" value="${Utils.today()}"></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Descrição</label><input class="form-input" id="tx-desc" placeholder="Ex: Salário, Aluguel..."></div>
+          <div class="form-group"><label class="form-label">Valor (R$)</label><input class="form-input" id="tx-amount" type="number" min="0" step="0.01" placeholder="0,00"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Categoria</label>
+            <select class="form-input form-select" id="tx-cat">
+              ${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Data</label><input class="form-input" id="tx-date" type="date" value="${Utils.today()}"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Parcela (ex: 1/6)</label><input class="form-input" id="tx-installment" placeholder="—"></div>
+          <div class="form-group"><label class="form-label">Observação</label><input class="form-input" id="tx-note" placeholder="Opcional"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="Modal.close()">Cancelar</button>
+          <button class="btn btn-primary" onclick="saveTransaction()">Salvar</button>
+        </div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Parcela (ex: 1/6)</label><input class="form-input" id="tx-installment" placeholder="—"></div>
-        <div class="form-group"><label class="form-label">Observação</label><input class="form-input" id="tx-note" placeholder="Opcional"></div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" onclick="Modal.close()">Cancelar</button>
-        <button class="btn btn-primary" onclick="saveTransaction()">Salvar</button>
+
+      <!-- LOTE -->
+      <div id="panel-batch" style="display:none">
+        <div style="font-size:13px;color:var(--text2);margin-bottom:14px">
+          Adicione várias transações de uma vez. Preencha cada linha e clique em <strong>＋ Linha</strong> para adicionar mais.
+        </div>
+
+        <!-- Cabeçalho da tabela lote -->
+        <div style="display:grid;grid-template-columns:2fr 1.2fr 1.2fr 1fr 90px 36px;gap:6px;margin-bottom:6px;padding:0 2px">
+          <span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Descrição</span>
+          <span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Valor</span>
+          <span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Categoria</span>
+          <span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Data</span>
+          <span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Tipo</span>
+          <span></span>
+        </div>
+
+        <div id="batch-rows" style="display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto;padding-right:2px"></div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+          <button class="btn btn-ghost btn-sm" onclick="addBatchRow()">＋ Linha</button>
+          <span id="batch-count" style="font-size:12px;color:var(--text3)">0 lançamentos</span>
+        </div>
+
+        <div style="background:var(--bg3);border-radius:12px;padding:10px 14px;margin-top:10px;font-size:12px;color:var(--text2);border:1px solid var(--border)">
+          💡 <strong>Dica:</strong> Pressione <kbd style="background:var(--bg4);padding:1px 5px;border-radius:4px;font-size:11px">Tab</kbd> para navegar entre os campos rapidamente.
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="Modal.close()">Cancelar</button>
+          <button class="btn btn-primary" onclick="saveBatchTransactions()">Salvar Todos</button>
+        </div>
       </div>
     </div>`);
+
+    // Inicializa com 3 linhas no lote
+    addBatchRow(); addBatchRow(); addBatchRow();
   },
 
   'add-client-modal'() {
@@ -2603,6 +2660,102 @@ function drawMonthlyChart() {
   ctx.strokeStyle = colorText3;
   ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(PAD_L, baseY); ctx.lineTo(W - PAD_R, baseY); ctx.stroke();
+}
+
+
+// ═══════════════════════════════════════════════════
+// BATCH TRANSACTIONS
+// ═══════════════════════════════════════════════════
+function switchTxTab(tab) {
+  const isSingle = tab === 'single';
+  document.getElementById('panel-single').style.display = isSingle ? 'block' : 'none';
+  document.getElementById('panel-batch').style.display  = isSingle ? 'none'  : 'block';
+
+  const ts = document.getElementById('tab-single');
+  const tb = document.getElementById('tab-batch');
+  const activeStyle  = 'background:var(--bg2);color:var(--text);border:2px solid var(--border)';
+  const inactiveStyle= 'background:transparent;color:var(--text2);border:2px solid transparent';
+  ts.style.cssText += ';' + (isSingle ? activeStyle  : inactiveStyle);
+  tb.style.cssText += ';' + (isSingle ? inactiveStyle : activeStyle);
+}
+
+let batchRowCount = 0;
+
+function addBatchRow() {
+  batchRowCount++;
+  const id = batchRowCount;
+  const cats = window.CATEGORIES || ['Alimentação','Transporte','Moradia','Saúde','Lazer','Educação','Roupas','Compras','Internet','Energia','Água','Reserva','Cartão','Outros'];
+  const today = new Date().toISOString().slice(0,10);
+
+  const row = document.createElement('div');
+  row.id = 'brow-' + id;
+  row.style.cssText = 'display:grid;grid-template-columns:2fr 1.2fr 1.2fr 1fr 90px 36px;gap:6px;align-items:center';
+  row.innerHTML = `
+    <input class="form-input" id="br-desc-${id}" placeholder="Descrição" style="padding:7px 10px;font-size:13px">
+    <input class="form-input" id="br-val-${id}"  placeholder="0,00" type="number" min="0" step="0.01" style="padding:7px 10px;font-size:13px">
+    <select class="form-input form-select" id="br-cat-${id}" style="padding:7px 10px;font-size:12px">
+      ${cats.map(c => '<option>'+c+'</option>').join('')}
+    </select>
+    <input class="form-input" id="br-date-${id}" type="date" value="${today}" style="padding:7px 10px;font-size:12px">
+    <select class="form-input form-select" id="br-type-${id}" style="padding:7px 10px;font-size:12px">
+      <option value="saida">↓ Saída</option>
+      <option value="entrada">↑ Entrada</option>
+    </select>
+    <button onclick="removeBatchRow(${id})" style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:6px 8px;color:var(--text3);cursor:pointer;font-size:14px;line-height:1" title="Remover">×</button>
+  `;
+  document.getElementById('batch-rows').appendChild(row);
+  updateBatchCount();
+  // focus desc of new row
+  setTimeout(() => { const el = document.getElementById('br-desc-'+id); if(el) el.focus(); }, 50);
+}
+
+function removeBatchRow(id) {
+  const el = document.getElementById('brow-'+id);
+  if(el) el.remove();
+  updateBatchCount();
+}
+
+function updateBatchCount() {
+  const n = document.getElementById('batch-rows')?.children.length || 0;
+  const el = document.getElementById('batch-count');
+  if(el) el.textContent = n + (n === 1 ? ' lançamento' : ' lançamentos');
+}
+
+function saveBatchTransactions() {
+  const rows = document.getElementById('batch-rows')?.children;
+  if(!rows || rows.length === 0) return Toast.show('Adicione ao menos uma linha','red');
+
+  const toSave = [];
+  let hasError = false;
+
+  Array.from(rows).forEach(row => {
+    const idMatch = row.id.match(/\d+$/);
+    if(!idMatch) return;
+    const id = idMatch[0];
+
+    const desc = document.getElementById('br-desc-'+id)?.value.trim();
+    const val  = parseFloat(document.getElementById('br-val-'+id)?.value) || 0;
+    const cat  = document.getElementById('br-cat-'+id)?.value;
+    const date = document.getElementById('br-date-'+id)?.value;
+    const type = document.getElementById('br-type-'+id)?.value;
+
+    if(!desc || !val || !date) {
+      // highlight row with error
+      row.style.outline = '2px solid var(--red)';
+      row.style.borderRadius = '8px';
+      hasError = true;
+      return;
+    }
+    row.style.outline = '';
+    toSave.push({ id: Utils.uid(), type, description: desc, amount: val, category: cat, date, installment: '', note: '' });
+  });
+
+  if(hasError) return Toast.show('Preencha todos os campos obrigatórios','red');
+  if(toSave.length === 0) return Toast.show('Nenhum lançamento para salvar','red');
+
+  Store.update(s => { toSave.forEach(t => s.transactions.push(t)); });
+  Modal.close();
+  Toast.show(`✅ ${toSave.length} lançamento(s) salvos!`);
 }
 
 function buildNav() {
