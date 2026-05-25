@@ -689,6 +689,30 @@ const Store = (() => {
   // Carrega local primeiro, depois Firebase em background
   load();
 
+  // Migração única: Contas Fixas → Recorrências existentes
+  if (
+    state.fixedBills &&
+    state.fixedBills.length > 0 &&
+    !state.settings.fixedBillsMigrated
+  ) {
+    state.fixedBills.forEach(b => {
+      state.recurrences.push({
+        id: b.id || Math.random().toString(36).slice(2,10),
+        name: b.name,
+        amount: b.amount,
+        day: parseInt((b.dueDate || '').split('-')[2]) || 1,
+        category: b.category || 'Contas',
+        type: 'saida',
+        active: true,
+        icon: '🏦'
+      });
+    });
+
+    state.settings.fixedBillsMigrated = true;
+    save();
+    console.log('✅ Contas Fixas migradas para Recorrências');
+  }
+
   // Tenta carregar do Firebase após 1s (deixa o app iniciar primeiro)
   setTimeout(() => {
     if (!window._fbLoaded) return;
@@ -3141,7 +3165,7 @@ const NavConfig = [
   {id:'dashboard',icon:'🏠',label:'Dashboard'},
   {section:'Finanças'},
   {id:'transactions',icon:'💸',label:'Lançamentos'},
-  {id:'fixed-bills',icon:'🏦',label:'Contas Fixas'},
+  
   {id:'cards',icon:'💳',label:'Cartões'},
   {id:'budget',icon:'🗂️',label:'Orçamento'},
   {section:'Crescimento'},
