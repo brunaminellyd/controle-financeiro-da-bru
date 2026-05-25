@@ -1,0 +1,2276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💰 Central Financeira</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   DESIGN SYSTEM – TOKENS
+═══════════════════════════════════════════ */
+:root {
+  --bg: #0e0f11;
+  --bg2: #141519;
+  --bg3: #1a1b21;
+  --bg4: #22242d;
+  --border: #2a2d38;
+  --border2: #353848;
+  --text: #e8eaf0;
+  --text2: #9da3b8;
+  --text3: #5c6280;
+  --accent: #6c63ff;
+  --accent2: #8b85ff;
+  --green: #22d3a0;
+  --green2: #16a97f;
+  --yellow: #f5b800;
+  --yellow2: #d9a300;
+  --red: #ff4d6a;
+  --red2: #cc3d55;
+  --blue: #3d9bff;
+  --purple: #b06cfb;
+  --card-r: 16px;
+  --shadow: 0 4px 24px rgba(0,0,0,.45);
+  --font-head: 'Syne', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --font-body: 'Inter', sans-serif;
+  --nav-w: 220px;
+  --top-h: 56px;
+}
+[data-theme="light"] {
+  --bg: #f0f2f8;
+  --bg2: #ffffff;
+  --bg3: #e8eaf2;
+  --bg4: #dde0ed;
+  --border: #d0d4e8;
+  --border2: #b8bdda;
+  --text: #1a1c2a;
+  --text2: #4a4f6a;
+  --text3: #8a8faa;
+  --shadow: 0 4px 24px rgba(0,0,0,.10);
+}
+
+/* ═══ RESET ═══ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);font-size:14px;display:flex;flex-direction:column}
+button{cursor:pointer;font-family:inherit;border:none;outline:none}
+input,select,textarea{font-family:inherit;outline:none;border:none}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+
+/* ═══ LAYOUT ═══ */
+#app{display:flex;height:100vh;overflow:hidden}
+
+/* ═══ SIDEBAR ═══ */
+#sidebar{
+  width:var(--nav-w);min-width:var(--nav-w);
+  background:var(--bg2);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  transition:width .25s,min-width .25s;
+  z-index:10;overflow:hidden;
+}
+#sidebar.collapsed{width:64px;min-width:64px}
+#sidebar.collapsed .nav-label,
+#sidebar.collapsed .logo-text,
+#sidebar.collapsed .sidebar-footer-text{display:none}
+.logo{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 18px;
+  font-family:var(--font-head);
+  color:var(--text);border-bottom:1px solid var(--border);
+  height:var(--top-h);
+}
+.logo-icon{font-size:22px;flex-shrink:0}
+nav{flex:1;overflow-y:auto;padding:8px 0}
+.nav-section{padding:6px 12px 2px;font-size:10px;font-weight:600;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;white-space:nowrap}
+#sidebar.collapsed .nav-section{display:none}
+.nav-item{
+  display:flex;align-items:center;gap:11px;
+  padding:10px 18px;margin:1px 8px;border-radius:10px;
+  font-size:13.5px;font-weight:500;color:var(--text2);
+  cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:linear-gradient(135deg,var(--accent),var(--purple));color:#fff;font-weight:600}
+.nav-item .nav-icon{font-size:17px;flex-shrink:0;width:20px;text-align:center}
+.sidebar-footer{padding:12px;border-top:1px solid var(--border)}
+
+/* ═══ TOPBAR ═══ */
+#topbar{
+  height:var(--top-h);min-height:var(--top-h);
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 20px;gap:12px;
+}
+#topbar .page-title{font-family:var(--font-head);font-weight:700;font-size:18px;flex:1}
+.top-btn{
+  background:var(--bg3);border:1px solid var(--border);
+  color:var(--text2);border-radius:9px;padding:7px 13px;
+  font-size:13px;display:flex;align-items:center;gap:6px;
+  transition:all .15s;
+}
+.top-btn:hover{background:var(--bg4);color:var(--text)}
+
+/* ═══ MAIN ═══ */
+#main-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#content{flex:1;overflow-y:auto;padding:20px}
+
+/* ═══ CARDS ═══ */
+.card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--card-r);padding:18px;
+  transition:border-color .2s;
+}
+.card:hover{border-color:var(--border2)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.card-title{font-family:var(--font-head);font-weight:700;font-size:14px;color:var(--text2);text-transform:uppercase;letter-spacing:.08em}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+
+/* ═══ STAT BOX ═══ */
+.stat-box{background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
+.stat-label{font-size:11px;color:var(--text3);font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.stat-value{font-family:var(--font-mono);font-size:22px;font-weight:500;color:var(--text)}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:4px}
+.stat-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;margin-top:6px}
+.badge-green{background:rgba(34,211,160,.15);color:var(--green)}
+.badge-yellow{background:rgba(245,184,0,.15);color:var(--yellow)}
+.badge-red{background:rgba(255,77,106,.15);color:var(--red)}
+.badge-blue{background:rgba(61,155,255,.15);color:var(--blue)}
+.badge-purple{background:rgba(176,108,251,.15);color:var(--purple)}
+
+/* ═══ PROGRESS BAR ═══ */
+.progress-wrap{background:var(--bg4);border-radius:99px;height:8px;overflow:hidden;margin-top:8px}
+.progress-fill{height:100%;border-radius:99px;transition:width .6s ease}
+.progress-green{background:linear-gradient(90deg,var(--green2),var(--green))}
+.progress-yellow{background:linear-gradient(90deg,var(--yellow2),var(--yellow))}
+.progress-red{background:linear-gradient(90deg,var(--red2),var(--red))}
+.progress-accent{background:linear-gradient(90deg,var(--accent),var(--purple))}
+
+/* ═══ HEALTH SCORE ═══ */
+.health-circle{
+  width:130px;height:130px;border-radius:50%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:var(--font-mono);position:relative;flex-shrink:0;
+}
+.health-score-num{font-size:36px;font-weight:500;line-height:1}
+.health-score-label{font-size:11px;color:var(--text2);margin-top:2px}
+.health-ring{position:absolute;top:0;left:0;width:100%;height:100%;transform:rotate(-90deg)}
+.health-ring circle{fill:none;stroke-width:8;stroke-linecap:round}
+.ring-bg{stroke:var(--bg4)}
+
+/* ═══ TABLES ═══ */
+.data-table{width:100%;border-collapse:collapse}
+.data-table th{font-size:11px;color:var(--text3);font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)}
+.data-table td{padding:10px 10px;border-bottom:1px solid var(--border);color:var(--text);font-size:13.5px;vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:var(--bg3)}
+
+/* ═══ BUTTONS ═══ */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:10px;font-size:13.5px;font-weight:600;transition:all .15s;cursor:pointer}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2);transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--bg3);color:var(--text)}
+.btn-red{background:var(--red);color:#fff}
+.btn-red:hover{opacity:.85}
+.btn-sm{padding:6px 11px;font-size:12px;border-radius:8px}
+.btn-xs{padding:4px 8px;font-size:11px;border-radius:6px}
+
+/* ═══ FORMS ═══ */
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:12px;color:var(--text2);font-weight:600;margin-bottom:6px;letter-spacing:.05em}
+.form-input{
+  width:100%;background:var(--bg3);border:1px solid var(--border);
+  color:var(--text);border-radius:10px;padding:9px 13px;
+  font-size:13.5px;transition:border-color .15s;
+}
+.form-input:focus{border-color:var(--accent)}
+.form-input::placeholder{color:var(--text3)}
+.form-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235c6280' fill='none' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+/* ═══ MODAL ═══ */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.65);
+  display:flex;align-items:center;justify-content:center;
+  z-index:100;backdrop-filter:blur(4px);
+  animation:fadeIn .15s;
+}
+.modal{
+  background:var(--bg2);border:1px solid var(--border2);
+  border-radius:20px;padding:24px;width:100%;max-width:500px;
+  max-height:90vh;overflow-y:auto;
+  animation:slideUp .2s ease;
+  box-shadow:0 24px 60px rgba(0,0,0,.6);
+}
+.modal-lg{max-width:720px}
+.modal-title{font-family:var(--font-head);font-weight:800;font-size:18px;margin-bottom:20px}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* ═══ STATUS CHIPS ═══ */
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.chip-green{background:rgba(34,211,160,.15);color:var(--green)}
+.chip-yellow{background:rgba(245,184,0,.15);color:var(--yellow)}
+.chip-red{background:rgba(255,77,106,.15);color:var(--red)}
+.chip-blue{background:rgba(61,155,255,.15);color:var(--blue)}
+.chip-purple{background:rgba(176,108,251,.15);color:var(--purple)}
+.chip-gray{background:var(--bg4);color:var(--text3)}
+
+/* ═══ CALENDAR ═══ */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-header-day{font-size:11px;color:var(--text3);font-weight:600;text-align:center;padding:4px 0}
+.cal-day{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:9px;padding:6px;min-height:70px;
+  cursor:pointer;transition:all .15s;position:relative;
+}
+.cal-day:hover{border-color:var(--accent);background:var(--bg4)}
+.cal-day.today{border-color:var(--accent)}
+.cal-day.other-month .cal-day-num{color:var(--text3)}
+.cal-day-num{font-size:12px;font-weight:700;margin-bottom:4px;font-family:var(--font-mono)}
+.cal-event{font-size:9px;padding:1px 5px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ═══ CHART MINI ═══ */
+.mini-chart{display:flex;align-items:flex-end;gap:3px;height:50px}
+.mini-bar{border-radius:3px 3px 0 0;flex:1;transition:height .5s;min-width:6px}
+
+/* ═══ TOAST ═══ */
+#toast-container{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast{
+  background:var(--bg2);border:1px solid var(--border2);
+  border-radius:12px;padding:12px 18px;
+  font-size:13px;color:var(--text);
+  box-shadow:var(--shadow);
+  animation:slideRight .25s ease;
+  display:flex;align-items:center;gap:10px;
+}
+@keyframes slideRight{from{transform:translateX(80px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ═══ TABS ═══ */
+.tabs{display:flex;gap:4px;background:var(--bg3);border-radius:12px;padding:4px;margin-bottom:18px}
+.tab{padding:8px 16px;border-radius:9px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;transition:all .15s}
+.tab.active{background:var(--bg2);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.2)}
+
+/* ═══ TOGGLE SWITCH ═══ */
+.toggle{position:relative;width:40px;height:22px;cursor:pointer}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-slider{position:absolute;inset:0;background:var(--bg4);border-radius:11px;transition:.2s}
+.toggle-slider::after{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.2s}
+.toggle input:checked~.toggle-slider{background:var(--accent)}
+.toggle input:checked~.toggle-slider::after{transform:translateX(18px)}
+
+/* ═══ DONUT CHART ═══ */
+.donut-wrap{position:relative;display:flex;align-items:center;justify-content:center}
+.donut-label{position:absolute;text-align:center}
+
+/* ═══ EMPTY STATE ═══ */
+.empty-state{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty-state .empty-icon{font-size:40px;margin-bottom:10px}
+.empty-state p{font-size:13px}
+
+/* ═══ ALERTS ═══ */
+.alert{border-radius:12px;padding:13px 16px;margin-bottom:10px;font-size:13px;display:flex;align-items:flex-start;gap:10px}
+.alert-green{background:rgba(34,211,160,.1);border:1px solid rgba(34,211,160,.25);color:var(--green)}
+.alert-yellow{background:rgba(245,184,0,.1);border:1px solid rgba(245,184,0,.25);color:var(--yellow)}
+.alert-red{background:rgba(255,77,106,.1);border:1px solid rgba(255,77,106,.25);color:var(--red)}
+
+/* ═══ QUICK ADD BAR ═══ */
+.quick-bar{
+  height:52px;background:var(--bg2);border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;padding:0 20px;
+}
+
+/* ═══ COLOR SWATCH ═══ */
+.color-swatch{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:border-color .15s}
+.color-swatch.active{border-color:var(--text)}
+
+/* RESPONSIVE COMPACT */
+@media(max-width:900px){
+  .grid4{grid-template-columns:1fr 1fr}
+  .grid3{grid-template-columns:1fr 1fr}
+  #sidebar{width:64px;min-width:64px}
+  #sidebar .nav-label,#sidebar .logo-text,#sidebar .sidebar-footer-text{display:none}
+  #sidebar .nav-section{display:none}
+}
+@media(max-width:600px){
+  .grid2,.grid3,.grid4{grid-template-columns:1fr}
+  .form-row,.form-row3{grid-template-columns:1fr}
+  #content{padding:14px}
+}
+
+/* ═══ PAGE ANIMATIONS ═══ */
+.page-enter{animation:pageIn .2s ease}
+@keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ═══ UTILITY ═══ */
+.flex{display:flex}.flex-col{flex-direction:column}.items-center{align-items:center}
+.justify-between{justify-content:space-between}.gap4{gap:4px}.gap8{gap:8px}.gap12{gap:12px}.gap16{gap:16px}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mt20{margin-top:20px}
+.mb8{margin-bottom:8px}.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}
+.text-green{color:var(--green)}.text-red{color:var(--red)}.text-yellow{color:var(--yellow)}
+.text-accent{color:var(--accent)}.text-muted{color:var(--text3)}
+.font-mono{font-family:var(--font-mono)}.font-head{font-family:var(--font-head)}
+.bold{font-weight:700}.w-full{width:100%}
+.section-title{font-family:var(--font-head);font-size:20px;font-weight:800;margin-bottom:16px}
+.divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+.clickable{cursor:pointer;transition:opacity .15s}.clickable:hover{opacity:.75}
+.icon-btn{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 9px;color:var(--text2);cursor:pointer;transition:all .15s;font-size:14px}
+.icon-btn:hover{background:var(--bg4);color:var(--text)}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div class="logo">
+      <span class="logo-text" style="display:flex;flex-direction:column;line-height:1.25;font-family:var(--font-head)">
+        <span style="font-size:15px;font-weight:800;letter-spacing:.02em;color:var(--text)">Controle Financeiro</span>
+        <span style="font-size:11px;font-weight:400;font-family:var(--font-body);font-style:italic;letter-spacing:.08em;color:var(--text3)">da Bru</span>
+      </span>
+    </div>
+    <nav id="nav-menu"></nav>
+    <div class="sidebar-footer">
+      <div class="nav-item" onclick="toggleTheme()">
+        <span class="nav-icon" id="theme-icon">🌙</span>
+        <span class="nav-label sidebar-footer-text">Tema</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div id="main-wrap">
+    <div id="topbar">
+      <button class="icon-btn" onclick="toggleSidebar()" title="Menu">☰</button>
+      <span class="page-title" id="page-title">Dashboard</span>
+      <button class="top-btn" onclick="showModal('quick-add-modal')">＋ Lançamento</button>
+      <button class="top-btn" onclick="showPage('backup')">💾 Backup</button>
+    </div>
+    <div id="content"></div>
+    <div class="quick-bar">
+      <span class="text-muted" style="font-size:12px">Atalhos:</span>
+      <button class="btn btn-ghost btn-sm" onclick="showModal('quick-add-modal')">＋ Transação</button>
+      <button class="btn btn-ghost btn-sm" onclick="showModal('add-client-modal')">＋ Cliente</button>
+      <button class="btn btn-ghost btn-sm" onclick="showModal('add-subscription-modal')">＋ Assinatura</button>
+      <button class="btn btn-ghost btn-sm" onclick="showModal('add-card-modal')">＋ Cartão</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<div id="modal-container"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// MODULE: STATE STORE
+// ═══════════════════════════════════════════════════
+const Store = (() => {
+  const STORAGE_KEY = 'financas_pro_v2';
+
+  const defaults = {
+    transactions: [],
+    clients: [],
+    subscriptions: [],
+    cards: [],
+    goals: [],
+    fixedBills: [],
+    budgets: [],
+    settings: {
+      theme: 'dark',
+      accentColor: '#6c63ff',
+      monthlyIncome: 0,
+      emergencyMonths: 6,
+    },
+    version: 2
+  };
+
+  let state = JSON.parse(JSON.stringify(defaults));
+
+  function load() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        state = { ...defaults, ...parsed };
+      }
+    } catch(e) { console.warn('Load error', e); }
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch(e) { console.warn('Save error', e); }
+  }
+
+  function get() { return state; }
+
+  function update(fn) {
+    fn(state);
+    save();
+    if (Router.currentPage) Router.render(Router.currentPage);
+  }
+
+  function exportJSON() {
+    const blob = new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `financas_backup_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+  }
+
+  function importJSON(json) {
+    try {
+      const data = JSON.parse(json);
+      state = { ...defaults, ...data };
+      save();
+      Router.render(Router.currentPage);
+      Toast.show('✅ Backup restaurado com sucesso!', 'green');
+    } catch(e) {
+      Toast.show('❌ Arquivo inválido', 'red');
+    }
+  }
+
+  function reset() {
+    state = JSON.parse(JSON.stringify(defaults));
+    save();
+    Router.render(Router.currentPage);
+    Toast.show('🔄 Dados resetados', 'yellow');
+  }
+
+  load();
+  return { get, update, save, exportJSON, importJSON, reset };
+})();
+
+// ═══════════════════════════════════════════════════
+// MODULE: UTILS
+// ═══════════════════════════════════════════════════
+const Utils = {
+  fmt: (v) => 'R$ ' + Number(v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}),
+  fmtShort: (v) => {
+    const n = Number(v||0);
+    if(n >= 1000) return 'R$ ' + (n/1000).toFixed(1) + 'k';
+    return 'R$ ' + n.toFixed(0);
+  },
+  today: () => new Date().toISOString().slice(0,10),
+  monthKey: (d) => (d || new Date().toISOString()).slice(0,7),
+  dayOfMonth: (d) => new Date(d+'T12:00:00').getDate(),
+  monthName: (m) => ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][m],
+  uid: () => Math.random().toString(36).slice(2,10),
+  daysUntil: (dateStr) => {
+    const now = new Date(); now.setHours(0,0,0,0);
+    const d = new Date(dateStr+'T12:00:00');
+    return Math.round((d-now)/(1000*60*60*24));
+  },
+  isOverdue: (dateStr) => dateStr < Utils.today(),
+  clamp: (v, min, max) => Math.min(Math.max(v, min), max),
+  percent: (part, total) => total === 0 ? 0 : Utils.clamp(Math.round(part/total*100),0,100),
+  addMonths: (dateStr, n) => {
+    const d = new Date(dateStr+'T12:00:00');
+    d.setMonth(d.getMonth()+n);
+    return d.toISOString().slice(0,10);
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// MODULE: TOAST
+// ═══════════════════════════════════════════════════
+const Toast = {
+  show(msg, type='green') {
+    const icons = {green:'✅', red:'❌', yellow:'⚠️', blue:'ℹ️'};
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.innerHTML = `<span>${icons[type]||'💬'}</span><span>${msg}</span>`;
+    document.getElementById('toast-container').prepend(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// MODULE: MODAL
+// ═══════════════════════════════════════════════════
+const Modal = {
+  open(html) {
+    const c = document.getElementById('modal-container');
+    c.innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)Modal.close()">${html}</div>`;
+  },
+  close() {
+    document.getElementById('modal-container').innerHTML = '';
+  }
+};
+function showModal(id) { ModalHandlers[id]?.(); }
+
+// ═══════════════════════════════════════════════════
+// MODULE: ROUTER
+// ═══════════════════════════════════════════════════
+const Router = {
+  currentPage: 'dashboard',
+  pages: {},
+  register(name, renderFn) { this.pages[name] = renderFn; },
+  render(name) {
+    this.currentPage = name;
+    const el = document.getElementById('content');
+    const fn = this.pages[name];
+    if (fn) {
+      el.innerHTML = fn();
+      el.scrollTop = 0;
+      el.firstElementChild?.classList.add('page-enter');
+      if (name === 'dashboard') requestAnimationFrame(drawMonthlyChart);
+    }
+    document.querySelectorAll('.nav-item').forEach(i => {
+      i.classList.toggle('active', i.dataset.page === name);
+    });
+    document.getElementById('page-title').textContent = NavConfig.find(n=>n.id===name)?.label || '';
+  }
+};
+function showPage(name) { Router.render(name); }
+
+// ═══════════════════════════════════════════════════
+// MODULE: HEALTH SCORE
+// ═══════════════════════════════════════════════════
+const HealthScore = {
+  compute() {
+    const s = Store.get();
+    const now = Utils.monthKey();
+    const txMonth = s.transactions.filter(t => t.date.startsWith(now));
+    const income = txMonth.filter(t=>t.type==='entrada').reduce((a,b)=>a+b.amount,0);
+    const expense = txMonth.filter(t=>t.type==='saida').reduce((a,b)=>a+b.amount,0);
+    let score = 0;
+    let details = [];
+
+    // 1. % economizado (0–20pts)
+    if(income > 0) {
+      const pct = (income - expense) / income;
+      const pts = Utils.clamp(Math.round(pct * 40), 0, 20);
+      score += pts;
+      details.push({label:'% Economizado', pts, max:20});
+    }
+
+    // 2. Gastos mensais vs renda (0–15pts)
+    const inc = s.settings.monthlyIncome || income || 1;
+    const expRatio = expense / inc;
+    const pts2 = expRatio < 0.6 ? 15 : expRatio < 0.8 ? 10 : expRatio < 1 ? 5 : 0;
+    score += pts2;
+    details.push({label:'Gastos vs Renda', pts:pts2, max:15});
+
+    // 3. Uso dos cartões (0–15pts)
+    const cards = s.cards;
+    let cardPts = 15;
+    cards.forEach(c => {
+      const pct = c.limit > 0 ? c.used/c.limit : 0;
+      if(pct > 0.9) cardPts = Math.min(cardPts, 0);
+      else if(pct > 0.7) cardPts = Math.min(cardPts, 7);
+    });
+    score += cardPts;
+    details.push({label:'Uso dos Cartões', pts:cardPts, max:15});
+
+    // 4. Metas alcançadas (0–15pts)
+    const goals = s.goals;
+    const achievedGoals = goals.filter(g => g.current >= g.target).length;
+    const goalPts = goals.length ? Utils.clamp(Math.round(achievedGoals/goals.length*15),0,15) : 10;
+    score += goalPts;
+    details.push({label:'Metas', pts:goalPts, max:15});
+
+    // 5. Contas atrasadas (0–15pts)
+    const overdueFixed = s.fixedBills.filter(b => !b.paid && b.dueDate < Utils.today()).length;
+    const overduePts = overdueFixed === 0 ? 15 : overdueFixed === 1 ? 8 : 0;
+    score += overduePts;
+    details.push({label:'Contas em Dia', pts:overduePts, max:15});
+
+    // 6. Reserva de emergência (0–10pts)
+    const avgExpense = expense || 1;
+    const emergency = s.transactions.filter(t=>t.category==='Reserva').reduce((a,b)=>a+b.amount,0);
+    const target = avgExpense * s.settings.emergencyMonths;
+    const emergPts = Utils.clamp(Math.round(emergency/target*10),0,10);
+    score += emergPts;
+    details.push({label:'Reserva', pts:emergPts, max:10});
+
+    // 7. Recebimentos pendentes (0–10pts)
+    const pending = s.clients.filter(c=>c.status==='pendente').length;
+    const pendPts = pending === 0 ? 10 : pending <= 2 ? 6 : 2;
+    score += pendPts;
+    details.push({label:'Recebimentos', pts:pendPts, max:10});
+
+    const total = Utils.clamp(score, 0, 100);
+    const level = total >= 80 ? 'excellent' : total >= 50 ? 'attention' : 'danger';
+    return { score: total, level, details };
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// MODULE: PROJECTIONS
+// ═══════════════════════════════════════════════════
+const Projections = {
+  compute() {
+    const s = Store.get();
+    const now = Utils.today();
+    const nowDate = new Date(now+'T12:00:00');
+    const currentBalance = this.currentBalance();
+
+    const horizons = [7, 15, 30];
+    return horizons.map(days => {
+      const futureDate = new Date(nowDate);
+      futureDate.setDate(futureDate.getDate() + days);
+      const futureDateStr = futureDate.toISOString().slice(0,10);
+      let balance = currentBalance;
+
+      // Fixed bills due in range
+      s.fixedBills.forEach(b => {
+        if(!b.paid && b.dueDate >= now && b.dueDate <= futureDateStr) {
+          balance -= b.amount;
+        }
+      });
+
+      // Subscriptions due
+      s.subscriptions.forEach(sub => {
+        if(sub.renewalDate >= now && sub.renewalDate <= futureDateStr) {
+          balance -= sub.amount;
+        }
+      });
+
+      // Expected client payments
+      s.clients.filter(c=>c.status==='pendente' && c.expectedDate >= now && c.expectedDate <= futureDateStr)
+        .forEach(c => balance += c.amount);
+
+      return { days, date: futureDateStr, balance };
+    });
+  },
+  currentBalance() {
+    const s = Store.get();
+    const income = s.transactions.filter(t=>t.type==='entrada').reduce((a,b)=>a+b.amount,0);
+    const expense = s.transactions.filter(t=>t.type==='saida').reduce((a,b)=>a+b.amount,0);
+    return income - expense;
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// PAGE: DASHBOARD
+// ═══════════════════════════════════════════════════
+Router.register('dashboard', () => {
+  const s = Store.get();
+  const now = Utils.monthKey();
+  const txMonth = s.transactions.filter(t => t.date.startsWith(now));
+  const income = txMonth.filter(t=>t.type==='entrada').reduce((a,b)=>a+b.amount,0);
+  const expense = txMonth.filter(t=>t.type==='saida').reduce((a,b)=>a+b.amount,0);
+  const balance = income - expense;
+  const health = HealthScore.compute();
+  const proj = Projections.compute();
+
+  const healthColor = health.level === 'excellent' ? 'var(--green)' : health.level === 'attention' ? 'var(--yellow)' : 'var(--red)';
+  const healthMsg = health.level === 'excellent' ? '🟢 Sua situação financeira está equilibrada.' : health.level === 'attention' ? '🟡 Alguns pontos precisam de atenção.' : '🔴 Sua previsão financeira exige ajustes.';
+  const healthIcon = health.level === 'excellent' ? '🟢' : health.level === 'attention' ? '🟡' : '🔴';
+  const dashArc = Math.round(health.score * 2.83); // 283 = circumference of r=45
+
+  // Recent transactions
+  const recentTx = [...s.transactions].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
+
+  // Category totals
+  const catTotals = {};
+  txMonth.filter(t=>t.type==='saida').forEach(t => {
+    catTotals[t.category] = (catTotals[t.category]||0) + t.amount;
+  });
+  const topCats = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).slice(0,4);
+
+  // Pending clients
+  const pendingClients = s.clients.filter(c=>c.status==='pendente');
+  const pendingTotal = pendingClients.reduce((a,b)=>a+b.amount,0);
+
+  // Overdue bills
+  const overdueBills = s.fixedBills.filter(b=>!b.paid && b.dueDate < Utils.today());
+
+  return `<div>
+    <!-- HEALTH + OVERVIEW ROW -->
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:14px;margin-bottom:14px">
+      <!-- Health Score Card -->
+      <div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-width:180px;padding:20px">
+        <div class="health-circle">
+          <svg class="health-ring" viewBox="0 0 100 100">
+            <circle class="ring-bg" cx="50" cy="50" r="42" stroke-dasharray="264" stroke-dashoffset="0"/>
+            <circle cx="50" cy="50" r="42" fill="none" stroke-width="8" stroke-linecap="round"
+              stroke="${healthColor}" stroke-dasharray="264" stroke-dashoffset="${264 - Math.round(health.score/100*264)}"
+              style="transition:stroke-dashoffset .8s ease"/>
+          </svg>
+          <div class="health-score-num font-mono" style="color:${healthColor}">${health.score}</div>
+          <div class="health-score-label">de 100</div>
+        </div>
+        <div style="font-size:12px;font-weight:700;text-align:center">${healthIcon} Saúde Financeira</div>
+        <div style="font-size:11px;color:var(--text2);text-align:center">${healthMsg}</div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+        <div class="stat-box">
+          <div class="stat-label">Entradas (mês)</div>
+          <div class="stat-value text-green">${Utils.fmtShort(income)}</div>
+          <div class="stat-sub">Este mês</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Saídas (mês)</div>
+          <div class="stat-value text-red">${Utils.fmtShort(expense)}</div>
+          <div class="stat-sub">Este mês</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Saldo atual</div>
+          <div class="stat-value ${balance>=0?'text-green':'text-red'}">${Utils.fmtShort(balance)}</div>
+          <div class="stat-sub">${balance>=0?'Positivo':'Negativo'}</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">A Receber</div>
+          <div class="stat-value text-accent">${Utils.fmtShort(pendingTotal)}</div>
+          <div class="stat-sub">${pendingClients.length} cliente(s)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Assinaturas</div>
+          <div class="stat-value">${Utils.fmtShort(s.subscriptions.reduce((a,b)=>a+b.amount,0))}</div>
+          <div class="stat-sub">${s.subscriptions.length} ativa(s)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Contas Atraso</div>
+          <div class="stat-value ${overdueBills.length>0?'text-red':'text-green'}">${overdueBills.length}</div>
+          <div class="stat-sub">${overdueBills.length===0?'Tudo em dia':'Verificar!'}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALERTS -->
+    ${overdueBills.length > 0 ? `<div class="alert alert-red mb12">⚠️ <div><strong>${overdueBills.length} conta(s) em atraso!</strong> Verifique suas contas fixas.</div></div>` : ''}
+    ${health.level === 'danger' ? `<div class="alert alert-red mb12">🔴 <div><strong>Atenção:</strong> Sua saúde financeira precisa de ajustes urgentes.</div></div>` : ''}
+    ${health.level === 'attention' ? `<div class="alert alert-yellow mb12">🟡 <div>Alguns pontos precisam de atenção. Veja detalhes em Saúde Financeira.</div></div>` : ''}
+
+
+    <!-- GRÁFICO COMPARATIVO MENSAL -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header">
+        <span class="card-title">📈 Comparativo Mensal</span>
+        <div class="flex gap12 items-center">
+          <div class="flex gap8 items-center"><div style="width:10px;height:10px;background:var(--green);border-radius:3px"></div><span style="font-size:11px;color:var(--text2)">Entradas</span></div>
+          <div class="flex gap8 items-center"><div style="width:10px;height:10px;background:var(--red);border-radius:3px"></div><span style="font-size:11px;color:var(--text2)">Saídas</span></div>
+          <div class="flex gap8 items-center"><div style="width:10px;height:10px;background:var(--accent);border-radius:3px"></div><span style="font-size:11px;color:var(--text2)">Saldo</span></div>
+        </div>
+      </div>
+      <div style="width:100%;overflow-x:auto" id="dash-monthly-chart">
+        <canvas id="monthlyChartCanvas" style="width:100%;height:220px;display:block"></canvas>
+      </div>
+    </div>
+
+    <div class="grid3" style="margin-bottom:14px">
+      <!-- Projeção Futura -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📅 Projeção de Saldo</span>
+        </div>
+        ${proj.map(p=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:12px;color:var(--text2)">Em ${p.days} dias</span>
+            <span class="font-mono ${p.balance>=0?'text-green':'text-red'}" style="font-size:14px">${Utils.fmt(p.balance)}</span>
+          </div>
+        `).join('')}
+      </div>
+
+      <!-- Top Categorias -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📊 Top Gastos</span>
+          <button class="btn btn-ghost btn-sm" onclick="showPage('reports')">Ver tudo</button>
+        </div>
+        ${topCats.length === 0 ? `<div class="empty-state"><div class="empty-icon">📊</div><p>Nenhum gasto registrado</p></div>` :
+          topCats.map(([cat,val])=>`
+            <div style="margin-bottom:12px">
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                <span style="font-size:12px">${cat}</span>
+                <span class="font-mono text-red" style="font-size:12px">${Utils.fmt(val)}</span>
+              </div>
+              <div class="progress-wrap"><div class="progress-fill progress-red" style="width:${Utils.percent(val,expense)}%"></div></div>
+            </div>
+          `).join('')}
+      </div>
+
+      <!-- Últimas Transações -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🕐 Recentes</span>
+          <button class="btn btn-ghost btn-sm" onclick="showPage('transactions')">Ver tudo</button>
+        </div>
+        ${recentTx.length === 0 ? `<div class="empty-state"><div class="empty-icon">📋</div><p>Nenhuma transação</p></div>` :
+          recentTx.map(t=>`
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
+              <div>
+                <div style="font-size:13px">${t.description}</div>
+                <div style="font-size:11px;color:var(--text3)">${t.category} · ${t.date}</div>
+              </div>
+              <span class="font-mono ${t.type==='entrada'?'text-green':'text-red'}" style="font-size:13px">
+                ${t.type==='entrada'?'+':'-'}${Utils.fmtShort(t.amount)}
+              </span>
+            </div>
+          `).join('')}
+      </div>
+    </div>
+
+    <!-- Cards Summary -->
+    ${s.cards.length > 0 ? `
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">💳 Cartões</span>
+        <button class="btn btn-ghost btn-sm" onclick="showPage('cards')">Gerenciar</button>
+      </div>
+      <div class="grid4">
+        ${s.cards.map(c=>{
+          const pct = c.limit>0 ? Math.round(c.used/c.limit*100) : 0;
+          const cls = pct>=90?'red':pct>=70?'yellow':'green';
+          return `<div style="padding:12px;background:var(--bg3);border-radius:12px;border:1px solid var(--border)">
+            <div style="font-size:13px;font-weight:700">${c.name}</div>
+            <div class="font-mono text-red" style="margin:4px 0">${Utils.fmtShort(c.used)}</div>
+            <div class="progress-wrap"><div class="progress-fill progress-${cls}" style="width:${pct}%"></div></div>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px">${pct}% usado · Fecha dia ${c.closeDay}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : ''}
+  </div>`;
+});
+
+// ═══════════════════════════════════════════════════
+// PAGE: TRANSACTIONS
+// ═══════════════════════════════════════════════════
+Router.register('transactions', () => {
+  const s = Store.get();
+  const sorted = [...s.transactions].sort((a,b)=>b.date.localeCompare(a.date));
+  const filterMonth = Utils.monthKey();
+
+  return `<div>
+    <div class="flex items-center justify-between mb16">
+      <h2 class="section-title">💸 Lançamentos</h2>
+      <div class="flex gap8">
+        <button class="btn btn-primary" onclick="showModal('quick-add-modal')">＋ Novo</button>
+      </div>
+    </div>
+    <div class="card">
+      <table class="data-table">
+        <thead><tr>
+          <th>Data</th><th>Descrição</th><th>Categoria</th><th>Tipo</th><th>Valor</th><th>Parcela</th><th>Ações</th>
+        </tr></thead>
+        <tbody>
+        ${sorted.length === 0 ? `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3)">Nenhuma transação. Clique em + Novo para começar.</td></tr>` :
+          sorted.map(t=>`
+            <tr>
+              <td class="font-mono" style="font-size:12px">${t.date}</td>
+              <td>${t.description}</td>
+              <td><span class="chip chip-gray">${t.category}</span></td>
+              <td><span class="chip ${t.type==='entrada'?'chip-green':'chip-red'}">${t.type==='entrada'?'↑ Entrada':'↓ Saída'}</span></td>
+              <td class="font-mono ${t.type==='entrada'?'text-green':'text-red'}">${Utils.fmt(t.amount)}</td>
+              <td style="font-size:12px;color:var(--text3)">${t.installment||'—'}</td>
+              <td>
+                <button class="icon-btn" onclick="editTransaction('${t.id}')" title="Editar">✏️</button>
+                <button class="icon-btn" onclick="deleteTransaction('${t.id}')" title="Excluir">🗑️</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+});
+
+// ═══════════════════════════════════════════════════
+// PAGE: HEALTH
+// ═══════════════════════════════════════════════════
+Router.register('health', () => {
+  const health = HealthScore.compute();
+  const s = Store.get();
+  const now = Utils.monthKey();
+  const txMonth = s.transactions.filter(t=>t.date.startsWith(now));
+  const income = txMonth.filter(t=>t.type==='entrada').reduce((a,b)=>a+b.amount,0);
+  const expense = txMonth.filter(t=>t.type==='saida').reduce((a,b)=>a+b.amount,0);
+  const avgExpense = expense || s.settings.monthlyIncome || 1;
+  const target = avgExpense * s.settings.emergencyMonths;
+  const emergency = s.transactions.filter(t=>t.category==='Reserva').reduce((a,b)=>a+b.amount,0);
+  const emergPct = Utils.percent(emergency, target);
+  const monthsToGoal = target > emergency && income > expense ? Math.ceil((target - emergency) / (income - expense)) : 0;
+  const healthColor = health.level==='excellent'?'var(--green)':health.level==='attention'?'var(--yellow)':'var(--red)';
+  const healthLabel = health.level==='excellent'?'🟢 Excelente':health.level==='attention'?'🟡 Atenção':'🔴 Cuidado';
+  const healthMsg = health.level==='excellent'?'🟢 Sua situação financeira está equilibrada.':health.level==='attention'?'🟡 Alguns pontos precisam de atenção.':'🔴 Sua previsão financeira exige ajustes.';
+
+  return `<div>
+    <h2 class="section-title">🏥 Saúde Financeira</h2>
+
+    <div class="grid2 mb16" style="grid-template-columns:auto 1fr">
+      <div class="card" style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:30px">
+        <div class="health-circle" style="width:160px;height:160px">
+          <svg class="health-ring" viewBox="0 0 100 100">
+            <circle class="ring-bg" cx="50" cy="50" r="42" stroke-dasharray="264" stroke-dashoffset="0"/>
+            <circle cx="50" cy="50" r="42" fill="none" stroke-width="8" stroke-linecap="round"
+              stroke="${healthColor}" stroke-dasharray="264" stroke-dashoffset="${264-Math.round(health.score/100*264)}"
+              style="transition:stroke-dashoffset .8s ease"/>
+          </svg>
+          <div style="font-family:var(--font-mono);font-size:44px;color:${healthColor};line-height:1">${health.score}</div>
+          <div style="font-size:12px;color:var(--text2)">/ 100</div>
+        </div>
+        <div style="font-size:16px;font-weight:800;font-family:var(--font-head)">${healthLabel}</div>
+        <div style="font-size:13px;color:var(--text2);text-align:center">${healthMsg}</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title mb16">Critérios de Avaliação</div>
+        ${health.details.map(d=>{
+          const pct = Utils.percent(d.pts, d.max);
+          const cls = pct >= 80 ? 'green' : pct >= 50 ? 'yellow' : 'red';
+          return `<div style="margin-bottom:14px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+              <span style="font-size:13px">${d.label}</span>
+              <span class="font-mono" style="font-size:12px;color:var(--text3)">${d.pts}/${d.max} pts</span>
+            </div>
+            <div class="progress-wrap"><div class="progress-fill progress-${cls}" style="width:${pct}%"></div></div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- RESERVA DE EMERGÊNCIA -->
+    <div class="card mb16">
+      <div class="card-header">
+        <span class="card-title">🆘 Reserva de Emergência</span>
+        <div style="font-size:12px;color:var(--text3)">Meta: ${s.settings.emergencyMonths} meses de gastos</div>
+      </div>
+      <div class="grid4">
+        <div class="stat-box">
+          <div class="stat-label">🎯 Valor Ideal</div>
+          <div class="stat-value">${Utils.fmt(target)}</div>
+          <div class="stat-sub">${s.settings.emergencyMonths}x gasto médio</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">💰 Valor Atual</div>
+          <div class="stat-value text-green">${Utils.fmt(emergency)}</div>
+          <div class="stat-sub">Categoria "Reserva"</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">📈 Progresso</div>
+          <div class="stat-value">${emergPct}%</div>
+          <div class="progress-wrap mt8"><div class="progress-fill progress-accent" style="width:${emergPct}%"></div></div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">📅 Tempo Estimado</div>
+          <div class="stat-value">${monthsToGoal > 0 ? monthsToGoal + ' meses' : emergPct >= 100 ? '✅ Meta atingida!' : '—'}</div>
+          <div class="stat-sub">${monthsToGoal > 0 ? 'Para atingir a meta' : ''}</div>
+        </div>
+      </div>
+      <div style="margin-top:14px">
+        <label class="form-label">Configurar número de meses</label>
+        <div class="flex gap8 items-center">
+          <input class="form-input" style="max-width:120px" type="number" min="1" max="24" value="${s.settings.emergencyMonths}"
+            onchange="Store.update(s=>{s.settings.emergencyMonths=+this.value});Router.render('health')">
+          <span style="color:var(--text3);font-size:13px">meses de gastos</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RENDA MENSAL -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">💼 Renda Mensal Base</span></div>
+      <div class="flex gap8 items-center">
+        <input class="form-input" style="max-width:200px" type="number" placeholder="0,00" value="${s.settings.monthlyIncome||''}"
+          onchange="Store.update(s=>{s.settings.monthlyIncome=+this.value});Router.render('health')">
+        <span style="font-size:13px;color:var(--text3)">Usado nos cálculos de saúde</span>
+      </div>
+    </div>
+  </div>`;
+});
+
+// ═══════════════════════════════════════════════════
+// PAGE: BUDGET
+// ═══════════════════════════════════════════════════
+Router.register('budget', () => {
+  const s = Store.get();
+  const now = Utils.monthKey();
+  const expense = s.transactions.filter(t=>t.type==='saida'&&t.date.startsWith(now));
+
+  const catTotals = {};
+  expense.forEach(t => { catTotals[t.category] = (catTotals[t.category]||0) + t.amount; });
+
+  return `<div>
+    <div class="flex items-center justify-between mb16">
+      <h2 class="section-title">🗂️ Orçamento Mensal</h2>
+      <button class="btn btn-primary" onclick="showModal('add-budget-modal')">＋ Categoria</button>
+    </div>
+    ${s.budgets.length === 0 ? `
+      <div class="card"><div class="empty-state"><div class="empty-icon">🗂️</div><p>Nenhum orçamento cadastrado.<br>Adicione limites por categoria.</p></div></div>
+    ` :
+      `<div class="card">
+        <table class="data-table">
+          <thead><tr><th>Categoria</th><th>Limite</th><th>Gasto</th><th>Restante</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody>
+          ${s.budgets.map(b=>{
+            const spent = catTotals[b.category]||0;
+            const pct = Utils.percent(spent, b.limit);
+            const remaining = b.limit - spent;
+            const cls = pct>=100?'red':pct>=70?'yellow':'green';
+            const statusChip = pct>=100?'chip-red':'chip-green';
+            const statusLabel = pct>=100?'🔴 Limite ultrapassado':pct>=70?'🟡 Próximo do limite':'🟢 Dentro do limite';
+            return `<tr>
+              <td>${b.icon||'📁'} ${b.category}</td>
+              <td class="font-mono">${Utils.fmt(b.limit)}</td>
+              <td class="font-mono text-red">${Utils.fmt(spent)}</td>
+              <td class="font-mono ${remaining>=0?'text-green':'text-red'}">${Utils.fmt(Math.abs(remaining))}${remaining<0?' excedido':''}</td>
+              <td>
+                <div style="min-width:150px">
+                  <div class="progress-wrap" style="margin-bottom:4px"><div class="progress-fill progress-${cls}" style="width:${Math.min(pct,100)}%"></div></div>
+                  <span style="font-size:11px;color:var(--text3)">${pct}%</span>
+                </div>
+              </td>
+              <td>
+                <button class="icon-btn" onclick="deleteBudget('${b.id}')">🗑️</button>
+              </td>
+            </tr>`;
+          }).join('')}
+          </tbody>
+        </table>
+      </div>`
+    }
+  </div>`;
+});
+
+// ═══════════════════════════════════════════════════
+// PAGE: SUBSCRIPTIONS
+// ═══════════════════════════════════════════════════
+Router.register('subscriptions', () => {
+  const s = Store.get();
+  const subs = s.subscriptions;
+  const totalMonthly = subs.reduce((a,b)=>a+(b.frequency==='mensal'?b.amount:b.amount/12),0);
+  const totalAnnual = totalMonthly * 12;
+  const today = Utils.today();
+  const upcoming = [...subs].filter(s=>s.renewalDate>=today).sort((a,b)=>a.renewalDate.localeCompare(b.renewalDate)).slice(0,3);
+
+  return `<div>
+    <div class="flex items-center justify-between mb16">
+      <h2 class="section-title">📦 Assinaturas</h2>
+      <button class="btn btn-primary" onclick="showModal('add-subscription-modal')">＋ Nova Assinatura</button>
+    </div>
+    <div class="grid3 mb16">
+      <div class="stat-box">
+        <div class="stat-label">Total Mensal</div>
+        <div class="stat-value text-red">${Utils.fmt(totalMonthly)}</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Total Anual</div>
+        <div class="stat-value">${Utils.fmt(totalAnnual)}</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Ativas</div>
+        <div class="stat-value">${subs.length}</div>
+      </div>
+    </div>
+    ${upcoming.length > 0 ? `
+    <div class="card mb16">
+      <div class="card-title mb12">📅 Próximas Cobranças</div>
+      ${upcoming.map(s=>{
+        const days = Utils.daysUntil(s.renewalDate);
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div><span style="font-size:15px">${s.icon||'📦'}</span> <strong>${s.name}</strong></div>
+          <div class="flex gap8 items-center">
+            <span class="font-mono">${Utils.fmt(s.amount)}</span>
+            <span class="chip ${days<=3?'chip-red':days<=7?'chip-yellow':'chip-blue'}">${days===0?'Hoje':days<0?'Vencida':days+' dias'}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>` : ''}
+    <div class="card">
+      <table class="data-table">
+        <thead><tr><th>Nome</th><th>Valor</th><th>Renovação</th><th>Frequência</th><th>Ações</th></tr></thead>
+        <tbody>
+        ${subs.length === 0 ? `<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text3)">Nenhuma assinatura cadastrada</td></tr>` :
+          subs.map(s=>`<tr>
+            <td>${s.icon||'📦'} <strong>${s.name}</strong></td>
+            <td class="font-mono">${Utils.fmt(s.amount)}</td>
+            <td>${s.renewalDate}</td>
+            <td><span class="chip chip-blue">${s.frequency}</span></td>
+            <td>
+              <button class="icon-btn" onclick="deleteSubscription('${s.id}')">🗑️</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+});
+
+// ═══════════════════════════════════════════════════
+// PAGE: CALENDAR
+// ═══════════════════════════════════════════════════
+Router.register('calendar', () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  return renderCalendar(year, month);
+});
+
+function renderCalendar(year, month) {
+  const s = Store.get();
+  const today = Utils.today();
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month+1, 0);
+  const startDay = firstDay.getDay();
+  const monthStr = `${year}-${String(month+1).padStart(2,'0')}`;
+
+  // Collect events by date
+  const events = {};
+  const addEvent = (date, emoji, label, color) => {
+    if(!events[date]) events[date] = [];
+    events[date].push({emoji, label, color});
+  };
+
+  s.transactions.filter(t=>t.date.startsWith(monthStr)).forEach(t => {
+    addEvent(t.date, t.type==='entrada'?'💰':'💸', t.description, t.type==='entrada'?'chip-green':'chip-red');
+  });
+  s.fixedBills.filter(b=>b.dueDate.startsWith(monthStr)).forEach(b => {
+    addEvent(b.dueDate, b.paid?'✅':'💳', b.name, b.paid?'chip-green':b.dueDate<today?'chip-red':'chip-yellow');
+  });
+  s.subscriptions.filter(s=>s.renewalDate.startsWith(monthStr)).forEach(sub => {
+    addEvent(sub.renewalDate, '📦', sub.name, 'chip-purple');
+  });
+  s.goals.filter(g=>g.deadline&&g.deadline.startsWith(monthStr)).forEach(g => {
+    addEvent(g.deadline, '🎯', g.name, 'chip-blue');
+  });
+  s.clients.filter(c=>c.expectedDate&&c.expectedDate.startsWith(monthStr)).forEach(c => {
+    addEvent(c.expectedDate, c.status==='atrasado'?'⚠️':'💰', c.name, c.status==='atrasado'?'chip-red':'chip-green');
+  });
+
+  const days = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  let cells = [];
+
+  // prev month padding
+  for(let i=0;i<startDay;i++) {
+    const d = new Date(year,month,-(startDay-i-1));
+    cells.push({date:d.toISOString().slice(0,10), day:d.getDate(), otherMonth:true});
+  }
+  for(let d=1;d<=lastDay.getDate();d++) {
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    cells.push({date:dateStr, day:d, otherMonth:false});
+  }
+  while(cells.length%7!==0) {
+    const last = cells[cells.length-1];
+    const nd = new Date(last.date+'T12:00:00');
+    nd.setDate(nd.getDate()+1);
+    cells.push({date:nd.toISOString().slice(0,10), day:nd.getDate(), otherMonth:true});
+  }
+
+  return `<div>
+    <div class="flex items-center justify-between mb16">
+      <h2 class="section-title">📅 Calendário Financeiro</h2>
+      <div class="flex gap8 items-center">
+        <button class="icon-btn" onclick="navCalendar(${month===0?year-1:year},${month===0?11:month-1})">‹</button>
+        <span style="font-weight:700;font-size:15px">${Utils.monthName(month)} ${year}</span>
+        <button class="icon-btn" onclick="navCalendar(${month===11?year+1:year},${month===11?0:month+1})">›</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="cal-grid mb8">
+        ${days.map(d=>`<div class="cal-header-day">${d}</div>`).join('')}
+      </div>
+      <div class="cal-grid">
+        ${cells.map(cell=>{
+          const evs = events[cell.date]||[];
+          return `<div class="cal-day${cell.otherMonth?' other-month':''}${cell.date===today?' today':''}"
+            onclick="showCalDayDetail('${cell.date}')">
+            <div class="cal-day-num">${cell.day}</div>
+            ${evs.slice(0,3).map(e=>`<div class="cal-event ${e.color}" style="background:var(--bg4)">${e.emoji} ${e.label}</div>`).join('')}
+            ${evs.length>3?`<div style="font-size:9px;color:var(--text3)">+${evs.length-3} mais</div>`:''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function navCalendar(year, month) {
+  document.getElementById('content').innerHTML = renderCalendar(year, month);
+}
+
+function showCalDayDetail(date) {
+  const s = Store.get();
+  let items = [];
+  s.transactions.filter(t=>t.date===date).forEach(t => items.push(`${t.type==='entrada'?'💰':'💸'} ${t.description}: ${Utils.fmt(t.amount)}`));
+  s.fixedBills.filter(b=>b.dueDate===date).forEach(b => items.push(`${b.paid?'✅':'💳'} ${b.name}: ${Utils.fmt(b.amount)}`));
+  s.subscriptions.filter(s=>s.renewalDate===date).forEach(sub => items.push(`📦 ${sub.name}: ${Utils.fmt(sub.amount)}`));
+  s.clients.filter(c=>c.expectedDate===date).forEach(c => items.push(`👤 ${c.name}: ${Utils.fmt(c.amount)}`));
+
+  Modal.open(`<div class="modal">
+    <div class="modal-title">📅 ${date}</div>
+    ${items.length === 0 ? '<p style="color:var(--text3)">Nenhum evento neste dia.</p>' :
+      items.map(i=>`<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">${i}</div>`).join('')}
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="Modal.close()">Fechar</button></div>
+  </div>`);
+}
+
+// ═══════════════════════════════════════════════════
+// PAGE: FIXED BILLS
+// ═══════════════════════════════════════════════════
+Router.register('fixed-bills', () => {
+  const s = Store.get();
+  const today = Utils.today();
+  const bills = s.fixedBills;
+  const overdue = bills.filter(b=>!b.paid&&b.dueDate<today);
+  const dueSoon = bills.filter(b=>!b.paid&&b.dueDate>=today&&Utils.daysUntil(b.dueDate)<=7);
+
+  return `<div>
+    <div class="flex items-center justify-between mb16">
+      <h2 class="section-title">🏦 Contas Fixas</h2>
+      <button class="btn btn-primary" onclick="showModal('add-bill-modal')">＋ Nova Conta</button>
+    </div>
+    ${overdue.length > 0 ? `<div class="alert alert-red mb12">⚠️ ${overdue.length} conta(s) em atraso! ${overdue.map(b=>b.name).join(', ')}</div>` : ''}
+    ${dueSoon.length > 0 ? `<div class="alert alert-yellow mb12">⏰ ${dueSoon.length} conta(s) vencem em até 7 dias.</div>` : ''}
+    <div class="card">
+      <table class="data-table">
+        <thead><tr><th>Nome</th><th>Valor</th><th>Vencimento</th><th>Repetição</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody>
+        ${bills.length === 0 ? `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3)">Nenhuma conta fixa cadastrada</td></tr>` :
+          bills.map(b=>{
+            const days = Utils.daysUntil(b.dueDate);
+            const overdue = !b.paid && b.dueDate < today;
+            const chipClass = b.paid?'chip-green':overdue?'chip-red':days<=3?'chip-yellow':'chip-blue';
+            const chipLabel = b.paid?'✅ Pago':overdue?'⚠️ Atrasado':days===0?'Hoje':'Aberto';
+            return `<tr>
+              <td>${b.icon||'🏦'} <strong>${b.name}</strong></td>
+              <td class="font-mono">${Utils.fmt(b.amount)}</td>
+              <td>${b.dueDate}</td>
+              <td><span class="chip chip-gray">${b.repeat}</span></td>
+              <td><span class="chip ${chipClass}">${chipLabel}</span></td>
+              <td class="flex gap4">
+                ${!b.paid?`<button class="btn btn-primary btn-xs" onclick="markBillPaid('${b.id}')">✓ Pagar</button>`:''}
+                <button class="icon-btn" onclick="deleteBill('${b.id}')">🗑️</button>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+});
+
+// ═══════════════════════════════════════════════════
+// PAGE: CARDS
+// ═══════════════════════════════════════════════════
+Router.register('cards', () => {
+  const s = Store.get();
+  const cards = s.cards;
+  const totalLimit = cards.reduce((a,b)=>a+b.limit,0);
+  const totalUsed = cards.reduce((a,b)=>a+b.used,0);
+
+  return `<div>
+    <div class="flex items-center justify-between mb16">
+      <h2 class="section-title">💳 Central de Cartões</h2>
+      <button class="btn btn-primary" onclick="showModal('add-card-modal')">＋ Novo Cartão</button>
+    </div>
+    <div class="grid3 mb16">
+      <div class="stat-box">
+        <div class="stat-label">Limite Total</div>
+        <div class="stat-value">${Utils.fmt(totalLimit)}</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Total Usado</div>
+        <div class="stat-value text-red">${Utils.fmt(totalUsed)}</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Disponível</div>
+        <div class="stat-value text-green">${Utils.fmt(totalLimit-totalUsed)}</div>
+      </div>
+    </div>
+    <div class="grid2">
+    ${cards.length === 0 ? `<div class="card"><div class="empty-state"><div class="empty-icon">💳</div><p>Nenhum cartão cadastrado</p></div></div>` :
+      cards.map(c=>{
+        const pct = c.limit>0?Math.round(c.used/c.limit*100):0;
+        const cls = pct>=90?'red':pct>=70?'yellow':'green';
+        const alert = pct>=90?`<div class="alert alert-red mt12">🔴 Limite acima de 90%! Atenção.</div>`:pct>=70?`<div class="alert alert-yellow mt12">🟡 Limite acima de 70%. Tome cuidado.</div>`:'';
+        const barGrad = pct>=90?'linear-gradient(90deg,#cc3d55,#ff4d6a)':pct>=70?'linear-gradient(90deg,#d9a300,#f5b800)':'linear-gradient(90deg,#16a97f,#22d3a0)';
+        return `<div class="card">
+          <div class="card-header">
+            <div>
+              <div style="font-family:var(--font-head);font-size:16px;font-weight:800">${c.name}</div>
+              <div style="font-size:12px;color:var(--text3)">Fecha dia ${c.closeDay} · Vence dia ${c.dueDay}</div>
+            </div>
+            <div class="flex gap8">
+              <button class="icon-btn" onclick="editCard('${c.id}')">✏️</button>
+              <button class="icon-btn" onclick="deleteCard('${c.id}')">🗑️</button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+            <div><div style="font-size:11px;color:var(--text3)">Limite Total</div><div class="font-mono" style="font-size:16px">${Utils.fmt(c.limit)}</div></div>
+            <div><div style="font-size:11px;color:var(--text3)">Disponível</div><div class="font-mono text-green" style="font-size:16px">${Utils.fmt(c.limit-c.used)}</div></div>
+            <div><div style="font-size:11px;color:var(--text3)">Usado</div><div class="font-mono text-red" style="font-size:16px">${Utils.fmt(c.used)}</div></div>
+            <div><div style="font-size:11px;color:var(--text3)">Percentual</div><div class="font-mono" style="font-size:16px;color:${pct>=90?'var(--red)':pct>=70?'var(--yellow)':'var(--green)'}">${pct}%</div></div>
+          </div>
+          <!-- Visual Bar -->
+          <div style="position:relative;height:24px;background:var(--bg4);border-radius:12px;overflow:hidden">
+            <div style="position:absolute;height:100%;border-radius:12px;background:${barGrad};width:${Math.min(pct,100)}%;transition:width .6s ease"></div>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${pct}% utilizado</div>
+          </div>
+          ${alert}
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+});
+
+// ═══════════════════════════════════════════════════
+// PAGE: CLIENTS
+// ═══════════════════════════════════════════════════
+Router.register('clients', () => {
+  const s = Store.get();
+  const clients = s.clients;
+  const today = Utils.today();
+  const paid = clients.filter(c=>c.status==='pago');
+  const pending = clients.filter(c=>c.status==='pendente');
+  const overdue = clients.filter(c=>c.status==='atrasado'||(c.status==='pendente'&&c.expectedDate<today));
+
+  const paidTotal = paid.reduce((a,b)=>a+b.amount,0);
+  const pendingTotal = pending.reduce((a,b)=>a+b.amount,0);
+  const overdueTotal = overdue.reduce((a,b)=>a+b.amount,0);
+
+  const now = Utils.monthKey();
+  const monthPaid = clients.filter(c=>c.paidDate&&c.paidDate.startsWith(now)).reduce((a,b)=>a+b.amount,0);
+
+  const statusChip = {pago:'chip-green',pendente:'chip-yellow',atrasado:'chip-red',agendado:'chip-blue'};
+  const statusIcon = {pago:'✅',pendente:'⏳',atrasado:'⚠️',agendado:'📅'};
+
+  return `<div>
+    <div class="flex items-center justify-between mb16">
+      <h2 class="section-title">👥 Central de Clientes</h2>
+      <button class="btn btn-primary" onclick="showModal('add-client-modal')">＋ Novo Cliente</button>
+    </div>
+    <div class="grid4 mb16">
+      <div class="stat-box">
+        <div class="stat-label">💰 Recebido</div>
+        <div class="stat-value text-green">${Utils.fmt(paidTotal)}</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">⏳ Pendente</div>
+        <div class="stat-value text-yellow">${Utils.fmt(pendingTotal)}</div>
+        <div class="stat-sub">${pending.length} cliente(s)</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">⚠️ Atrasado</div>
+        <div class="stat-value text-red">${Utils.fmt(overdueTotal)}</div>
+        <div class="stat-sub">${overdue.length} cliente(s)</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">📈 Média Mensal</div>
+        <div class="stat-value text-accent">${Utils.fmt(monthPaid)}</div>
+        <div class="stat-sub">Este mês</div>
+      </div>
+    </div>
+    <div class="card">
+      <table class="data-table">
+        <thead><tr><th>Cliente</th><th>Serviço</th><th>Valor</th><th>Prev. Receb.</th><th>Recebido em</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody>
+        ${clients.length === 0 ? `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3)">Nenhum cliente cadastrado</td></tr>` :
+          clients.map(c=>{
+            const st = c.status==='pendente'&&c.expectedDate<today?'atrasado':c.status;
+            return `<tr>
+              <td><strong>${c.name}</strong></td>
+              <td style="color:var(--text2)">${c.service||'—'}</td>
+              <td class="font-mono">${Utils.fmt(c.amount)}</td>
+              <td>${c.expectedDate||'—'}</td>
+              <td>${c.paidDate||'—'}</td>
+              <td><span class="chip ${statusChip[st]||'chip-gray'}">${statusIcon[st]||'❓'} ${st}</span></td>
+              <td class="flex gap4">
+                ${st!=='pago'?`<button class="btn btn-primary btn-xs" onclick="markClientPaid('${c.id}')">✓ Pago</button>`:''}
+                <button class="icon-btn" onclick="deleteClient('${c.id}')">🗑️</button>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+});
+
+// ═══════════════════════════════════════════════════
+// PAGE: GOALS
+// ═══════════════════════════════════════════════════
+Router.register('goals', () => {
+  const s = Store.get();
+  const goals = s.goals;
+  return `<div>
+    <div class="flex items-center justify-between mb16">
+      <h2 class="section-title">🎯 Metas Financeiras</h2>
+      <button class="btn btn-primary" onclick="showModal('add-goal-modal')">＋ Nova Meta</button>
+    </div>
+    ${goals.length === 0 ? `<div class="card"><div class="empty-state"><div class="empty-icon">🎯</div><p>Nenhuma meta cadastrada. Defina seus objetivos!</p></div></div>` :
+      `<div class="grid2">
+        ${goals.map(g=>{
+          const pct = Utils.percent(g.current, g.target);
+          const done = g.current >= g.target;
+          const daysLeft = g.deadline ? Utils.daysUntil(g.deadline) : null;
+          return `<div class="card">
+            <div class="card-header">
+              <div>
+                <div style="font-size:17px">${g.icon||'🎯'} <strong>${g.name}</strong></div>
+                ${g.deadline?`<div style="font-size:11px;color:var(--text3)">${daysLeft!==null?(daysLeft>0?daysLeft+' dias restantes':daysLeft===0?'Hoje!':'Vencida'):''}  · ${g.deadline}</div>`:''}
+              </div>
+              <div class="flex gap4">
+                <button class="icon-btn" onclick="addGoalProgress('${g.id}')">＋</button>
+                <button class="icon-btn" onclick="deleteGoal('${g.id}')">🗑️</button>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+              <span class="font-mono text-green">${Utils.fmt(g.current)}</span>
+              <span class="font-mono text-muted">de ${Utils.fmt(g.target)}</span>
+            </div>
+            <div class="progress-wrap"><div class="progress-fill ${done?'progress-green':'progress-accent'}" style="width:${pct}%"></div></div>
+            <div style="display:flex;justify-content:space-between;margin-top:6px">
+              <span style="font-size:12px;color:var(--text3)">${pct}% concluído</span>
+              ${done?`<span class="chip chip-green">🏆 Concluída!</span>`:`<span style="font-size:12px;color:var(--text3)">Faltam ${Utils.fmt(g.target-g.current)}</span>`}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`
+    }
+  </div>`;
+});
+
+// ═══════════════════════════════════════════════════
+// PAGE: REPORTS
+// ═══════════════════════════════════════════════════
+Router.register('reports', () => {
+  const s = Store.get();
+  const now = Utils.monthKey();
+  const txMonth = s.transactions.filter(t=>t.date.startsWith(now));
+  const income = txMonth.filter(t=>t.type==='entrada').reduce((a,b)=>a+b.amount,0);
+  const expense = txMonth.filter(t=>t.type==='saida').reduce((a,b)=>a+b.amount,0);
+
+  const catTotals = {};
+  txMonth.filter(t=>t.type==='saida').forEach(t => {
+    catTotals[t.category]=(catTotals[t.category]||0)+t.amount;
+  });
+  const topCats = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]);
+  const maxCat = topCats[0]?.[1]||1;
+
+  // Monthly history (last 6 months)
+  const months = [];
+  for(let i=5;i>=0;i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth()-i);
+    const mk = Utils.monthKey(d.toISOString());
+    const inc = s.transactions.filter(t=>t.date.startsWith(mk)&&t.type==='entrada').reduce((a,b)=>a+b.amount,0);
+    const exp = s.transactions.filter(t=>t.date.startsWith(mk)&&t.type==='saida').reduce((a,b)=>a+b.amount,0);
+    months.push({label:Utils.monthName(d.getMonth()),income:inc,expense:exp});
+  }
+  const maxMonth = Math.max(...months.map(m=>Math.max(m.income,m.expense)),1);
+
+  return `<div>
+    <div class="flex items-center justify-between mb16">
+      <h2 class="section-title">📊 Relatórios</h2>
+      <div class="flex gap8">
+        <button class="btn btn-ghost" onclick="exportReportPDF()">📄 PDF</button>
+        <button class="btn btn-ghost" onclick="Store.exportJSON()">📦 JSON</button>
+        <button class="btn btn-ghost" onclick="exportCSV()">📊 CSV</button>
+      </div>
+    </div>
+
+    <div class="grid2 mb16">
+      <!-- Gastos por Categoria -->
+      <div class="card">
+        <div class="card-title mb16">📊 Gastos por Categoria</div>
+        ${topCats.length === 0 ? `<div class="empty-state"><div class="empty-icon">📊</div><p>Nenhum dado disponível</p></div>` :
+          topCats.map(([cat,val])=>`
+            <div style="margin-bottom:12px">
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                <span style="font-size:13px;font-weight:600">${cat}</span>
+                <span class="font-mono text-red">${Utils.fmt(val)}</span>
+              </div>
+              <div class="progress-wrap"><div class="progress-fill progress-red" style="width:${Utils.percent(val,maxCat)}%"></div></div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px">${Utils.percent(val,expense)}% dos gastos</div>
+            </div>
+          `).join('')}
+      </div>
+
+      <!-- Evolução Mensal -->
+      <div class="card">
+        <div class="card-title mb16">📈 Evolução (6 meses)</div>
+        <div style="display:flex;align-items:flex-end;gap:6px;height:120px;margin-bottom:8px">
+          ${months.map(m=>`
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;height:100%">
+              <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;width:100%">
+                <div style="background:var(--green);border-radius:3px 3px 0 0;height:${Utils.percent(m.income,maxMonth)}%;min-height:${m.income>0?4:0}px"></div>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;width:100%">
+                <div style="background:var(--red);border-radius:3px 3px 0 0;opacity:.8;height:${Utils.percent(m.expense,maxMonth)}%;min-height:${m.expense>0?4:0}px"></div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <div style="display:flex;gap:6px">
+          ${months.map(m=>`<div style="flex:1;text-align:center;font-size:10px;color:var(--text3)">${m.label}</div>`).join('')}
+        </div>
+        <div class="flex gap12 mt12" style="justify-content:center">
+          <div class="flex gap4 items-center"><div style="width:10px;height:10px;background:var(--green);border-radius:2px"></div><span style="font-size:11px;color:var(--text2)">Entradas</span></div>
+          <div class="flex gap4 items-center"><div style="width:10px;height:10px;background:var(--red);border-radius:2px"></div><span style="font-size:11px;color:var(--text2)">Saídas</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <!-- Clientes -->
+      <div class="card">
+        <div class="card-title mb12">👥 Clientes</div>
+        <div class="flex gap12">
+          ${['pago','pendente','atrasado'].map(st=>{
+            const count = s.clients.filter(c=>c.status===st).length;
+            const total = s.clients.filter(c=>c.status===st).reduce((a,b)=>a+b.amount,0);
+            const colors = {pago:'text-green',pendente:'text-yellow',atrasado:'text-red'};
+            return `<div style="flex:1;text-align:center">
+              <div style="font-size:11px;color:var(--text3);text-transform:uppercase">${st}</div>
+              <div class="font-mono ${colors[st]}" style="font-size:16px">${Utils.fmtShort(total)}</div>
+              <div style="font-size:11px;color:var(--text3)">${count} cliente(s)</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      <!-- Assinaturas -->
+      <div class="card">
+        <div class="card-title mb12">📦 Assinaturas</div>
+        <div style="font-size:13px;color:var(--text2)">Total mensal: <span class="font-mono text-red">${Utils.fmt(s.subscriptions.reduce((a,b)=>a+(b.frequency==='mensal'?b.amount:b.amount/12),0))}</span></div>
+        <div style="font-size:13px;color:var(--text2);margin-top:4px">Total anual: <span class="font-mono">${Utils.fmt(s.subscriptions.reduce((a,b)=>a+(b.frequency==='anual'?b.amount:b.amount*12),0))}</span></div>
+        <div style="font-size:13px;color:var(--text2);margin-top:4px">Ativas: <strong>${s.subscriptions.length}</strong></div>
+      </div>
+    </div>
+  </div>`;
+});
+
+// ═══════════════════════════════════════════════════
+// PAGE: BACKUP
+// ═══════════════════════════════════════════════════
+Router.register('backup', () => {
+  return `<div>
+    <h2 class="section-title">💾 Backup & Configurações</h2>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title mb16">💾 Backup de Dados</div>
+        <p style="color:var(--text2);font-size:13px;margin-bottom:16px">Exporte seus dados para guardar ou transferir. Importe para restaurar um backup anterior.</p>
+        <div class="flex flex-col gap8">
+          <button class="btn btn-primary" onclick="Store.exportJSON()">📦 Exportar JSON</button>
+          <button class="btn btn-ghost" onclick="exportCSV()">📊 Exportar CSV</button>
+          <label class="btn btn-ghost" style="cursor:pointer">
+            📂 Importar JSON
+            <input type="file" accept=".json" style="display:none" onchange="importBackup(event)">
+          </label>
+        </div>
+        <hr class="divider">
+        <div class="card-title mb12" style="color:var(--red)">⚠️ Zona de Perigo</div>
+        <button class="btn btn-red" onclick="if(confirm('Tem certeza? Todos os dados serão apagados!'))Store.reset()">🗑️ Resetar Todos os Dados</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title mb16">🎨 Personalização</div>
+        <div class="form-group">
+          <label class="form-label">Tema</label>
+          <div class="flex gap8">
+            <button class="btn ${document.documentElement.dataset.theme!=='light'?'btn-primary':'btn-ghost'}" onclick="setTheme('dark')">🌙 Escuro</button>
+            <button class="btn ${document.documentElement.dataset.theme==='light'?'btn-primary':'btn-ghost'}" onclick="setTheme('light')">☀️ Claro</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cor de destaque</label>
+          <div class="flex gap8 flex-wrap">
+            ${['#6c63ff','#22d3a0','#f5b800','#ff4d6a','#3d9bff','#b06cfb'].map(c=>`
+              <div class="color-swatch${getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()===c?' active':''}"
+                style="background:${c}" onclick="setAccent('${c}')"></div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+});
+
+// ═══════════════════════════════════════════════════
+// MODAL HANDLERS
+// ═══════════════════════════════════════════════════
+const CATEGORIES = ['Alimentação','Transporte','Moradia','Saúde','Lazer','Educação','Roupas','Compras','Internet','Energia','Água','Reserva','Cartão','Outros'];
+const ICONS = ['🏠','📱','⚡','💧','🚗','🛒','🎓','🏥','💳','📦','🎯','💰','📚','🌐','🎮','✈️','🍕'];
+
+const ModalHandlers = {
+  'quick-add-modal'() {
+    Modal.open(`<div class="modal">
+      <div class="modal-title">＋ Novo Lançamento</div>
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <div class="flex gap8">
+          <button id="btn-entrada" class="btn btn-primary flex-1" onclick="selectTxType('entrada')">💚 Entrada</button>
+          <button id="btn-saida" class="btn btn-ghost flex-1" onclick="selectTxType('saida')">🔴 Saída</button>
+        </div>
+        <input type="hidden" id="tx-type" value="entrada">
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Descrição</label><input class="form-input" id="tx-desc" placeholder="Ex: Salário, Aluguel..."></div>
+        <div class="form-group"><label class="form-label">Valor (R$)</label><input class="form-input" id="tx-amount" type="number" min="0" step="0.01" placeholder="0,00"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Categoria</label>
+          <select class="form-input form-select" id="tx-cat">
+            ${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Data</label><input class="form-input" id="tx-date" type="date" value="${Utils.today()}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Parcela (ex: 1/6)</label><input class="form-input" id="tx-installment" placeholder="—"></div>
+        <div class="form-group"><label class="form-label">Observação</label><input class="form-input" id="tx-note" placeholder="Opcional"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="Modal.close()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveTransaction()">Salvar</button>
+      </div>
+    </div>`);
+  },
+
+  'add-client-modal'() {
+    Modal.open(`<div class="modal">
+      <div class="modal-title">＋ Novo Cliente</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nome</label><input class="form-input" id="cl-name" placeholder="Nome do cliente"></div>
+        <div class="form-group"><label class="form-label">Serviço</label><input class="form-input" id="cl-service" placeholder="Serviço prestado"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Valor (R$)</label><input class="form-input" id="cl-amount" type="number" min="0" step="0.01"></div>
+        <div class="form-group"><label class="form-label">Data Prevista</label><input class="form-input" id="cl-expected" type="date" value="${Utils.today()}"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-input form-select" id="cl-status">
+          <option value="pendente">⏳ Pendente</option>
+          <option value="pago">✅ Pago</option>
+          <option value="atrasado">⚠️ Atrasado</option>
+          <option value="agendado">📅 Agendado</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="Modal.close()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveClient()">Salvar</button>
+      </div>
+    </div>`);
+  },
+
+  'add-subscription-modal'() {
+    Modal.open(`<div class="modal">
+      <div class="modal-title">＋ Nova Assinatura</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nome</label><input class="form-input" id="sub-name" placeholder="Ex: Netflix, Spotify..."></div>
+        <div class="form-group"><label class="form-label">Ícone</label>
+          <select class="form-input form-select" id="sub-icon">
+            ${ICONS.map(i=>`<option value="${i}">${i}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Valor (R$)</label><input class="form-input" id="sub-amount" type="number" min="0" step="0.01"></div>
+        <div class="form-group"><label class="form-label">Renovação</label><input class="form-input" id="sub-renewal" type="date" value="${Utils.today()}"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Frequência</label>
+        <select class="form-input form-select" id="sub-freq">
+          <option value="mensal">🔁 Mensal</option>
+          <option value="anual">📅 Anual</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="Modal.close()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveSubscription()">Salvar</button>
+      </div>
+    </div>`);
+  },
+
+  'add-card-modal'() {
+    Modal.open(`<div class="modal">
+      <div class="modal-title">＋ Novo Cartão</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nome do Cartão</label><input class="form-input" id="card-name" placeholder="Ex: Nubank, Inter..."></div>
+        <div class="form-group"><label class="form-label">Limite Total (R$)</label><input class="form-input" id="card-limit" type="number" min="0" step="0.01"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Valor Usado (R$)</label><input class="form-input" id="card-used" type="number" min="0" step="0.01" value="0"></div>
+        <div class="form-group"><label class="form-label">Dia de Fechamento</label><input class="form-input" id="card-close" type="number" min="1" max="31" placeholder="Ex: 5"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Dia de Vencimento</label><input class="form-input" id="card-due" type="number" min="1" max="31" placeholder="Ex: 15">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="Modal.close()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveCard()">Salvar</button>
+      </div>
+    </div>`);
+  },
+
+  'add-bill-modal'() {
+    Modal.open(`<div class="modal">
+      <div class="modal-title">＋ Nova Conta Fixa</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nome</label><input class="form-input" id="bill-name" placeholder="Ex: Aluguel, Internet..."></div>
+        <div class="form-group"><label class="form-label">Ícone</label>
+          <select class="form-input form-select" id="bill-icon">
+            ${ICONS.map(i=>`<option value="${i}">${i}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Valor (R$)</label><input class="form-input" id="bill-amount" type="number" min="0" step="0.01"></div>
+        <div class="form-group"><label class="form-label">Vencimento</label><input class="form-input" id="bill-due" type="date" value="${Utils.today()}"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Repetição</label>
+        <select class="form-input form-select" id="bill-repeat">
+          <option value="mensal">🔁 Mensal</option>
+          <option value="anual">📅 Anual</option>
+          <option value="única">➡️ Única</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="Modal.close()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveBill()">Salvar</button>
+      </div>
+    </div>`);
+  },
+
+  'add-goal-modal'() {
+    Modal.open(`<div class="modal">
+      <div class="modal-title">＋ Nova Meta</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nome da Meta</label><input class="form-input" id="goal-name" placeholder="Ex: Viagem, Carro..."></div>
+        <div class="form-group"><label class="form-label">Ícone</label>
+          <select class="form-input form-select" id="goal-icon">
+            ${ICONS.map(i=>`<option value="${i}">${i}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Valor Alvo (R$)</label><input class="form-input" id="goal-target" type="number" min="0" step="0.01"></div>
+        <div class="form-group"><label class="form-label">Valor Atual (R$)</label><input class="form-input" id="goal-current" type="number" min="0" step="0.01" value="0"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Prazo (opcional)</label><input class="form-input" id="goal-deadline" type="date"></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="Modal.close()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveGoal()">Salvar</button>
+      </div>
+    </div>`);
+  },
+
+  'add-budget-modal'() {
+    Modal.open(`<div class="modal">
+      <div class="modal-title">＋ Limite de Categoria</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Categoria</label>
+          <select class="form-input form-select" id="bgt-cat">
+            ${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Ícone</label>
+          <select class="form-input form-select" id="bgt-icon">
+            ${ICONS.map(i=>`<option value="${i}">${i}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Limite Mensal (R$)</label><input class="form-input" id="bgt-limit" type="number" min="0" step="0.01"></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="Modal.close()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveBudget()">Salvar</button>
+      </div>
+    </div>`);
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// CRUD FUNCTIONS
+// ═══════════════════════════════════════════════════
+function selectTxType(type) {
+  document.getElementById('tx-type').value = type;
+  document.getElementById('btn-entrada').className = `btn flex-1 ${type==='entrada'?'btn-primary':'btn-ghost'}`;
+  document.getElementById('btn-saida').className = `btn flex-1 ${type==='saida'?'btn-primary':'btn-ghost'}`;
+}
+
+function saveTransaction() {
+  const desc = document.getElementById('tx-desc').value.trim();
+  const amount = parseFloat(document.getElementById('tx-amount').value)||0;
+  const type = document.getElementById('tx-type').value;
+  const cat = document.getElementById('tx-cat').value;
+  const date = document.getElementById('tx-date').value;
+  if(!desc||!amount||!date) return Toast.show('Preencha todos os campos obrigatórios','red');
+  Store.update(s=>s.transactions.push({id:Utils.uid(),type,description:desc,amount,category:cat,date,installment:document.getElementById('tx-installment').value,note:document.getElementById('tx-note').value}));
+  Modal.close();
+  Toast.show('✅ Transação salva!');
+}
+
+function editTransaction(id) {
+  const s = Store.get();
+  const t = s.transactions.find(t=>t.id===id);
+  if(!t) return;
+  Modal.open(`<div class="modal">
+    <div class="modal-title">✏️ Editar Transação</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Descrição</label><input class="form-input" id="et-desc" value="${t.description}"></div>
+      <div class="form-group"><label class="form-label">Valor</label><input class="form-input" id="et-amount" type="number" value="${t.amount}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Categoria</label>
+        <select class="form-input form-select" id="et-cat">${CATEGORIES.map(c=>`<option${c===t.category?' selected':''}>${c}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label class="form-label">Data</label><input class="form-input" id="et-date" type="date" value="${t.date}"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="Modal.close()">Cancelar</button>
+      <button class="btn btn-primary" onclick="updateTransaction('${id}')">Salvar</button>
+    </div>
+  </div>`);
+}
+
+function updateTransaction(id) {
+  Store.update(s=>{
+    const t = s.transactions.find(t=>t.id===id);
+    if(t){
+      t.description = document.getElementById('et-desc').value;
+      t.amount = parseFloat(document.getElementById('et-amount').value)||0;
+      t.category = document.getElementById('et-cat').value;
+      t.date = document.getElementById('et-date').value;
+    }
+  });
+  Modal.close(); Toast.show('✅ Transação atualizada!');
+}
+
+function deleteTransaction(id) {
+  if(!confirm('Excluir esta transação?')) return;
+  Store.update(s=>{ s.transactions = s.transactions.filter(t=>t.id!==id); });
+  Toast.show('🗑️ Transação excluída','yellow');
+}
+
+function saveClient() {
+  const name = document.getElementById('cl-name').value.trim();
+  const amount = parseFloat(document.getElementById('cl-amount').value)||0;
+  if(!name||!amount) return Toast.show('Preencha nome e valor','red');
+  Store.update(s=>s.clients.push({
+    id:Utils.uid(), name,
+    service:document.getElementById('cl-service').value,
+    amount, expectedDate:document.getElementById('cl-expected').value,
+    status:document.getElementById('cl-status').value, paidDate:null
+  }));
+  Modal.close(); Toast.show('✅ Cliente salvo!');
+}
+
+function markClientPaid(id) {
+  Store.update(s=>{ const c=s.clients.find(c=>c.id===id); if(c){c.status='pago';c.paidDate=Utils.today();} });
+  Toast.show('✅ Cliente marcado como pago!');
+}
+
+function deleteClient(id) {
+  if(!confirm('Excluir este cliente?')) return;
+  Store.update(s=>{ s.clients=s.clients.filter(c=>c.id!==id); });
+  Toast.show('🗑️ Cliente excluído','yellow');
+}
+
+function saveSubscription() {
+  const name = document.getElementById('sub-name').value.trim();
+  const amount = parseFloat(document.getElementById('sub-amount').value)||0;
+  if(!name||!amount) return Toast.show('Preencha nome e valor','red');
+  Store.update(s=>s.subscriptions.push({
+    id:Utils.uid(), name, icon:document.getElementById('sub-icon').value,
+    amount, renewalDate:document.getElementById('sub-renewal').value,
+    frequency:document.getElementById('sub-freq').value
+  }));
+  Modal.close(); Toast.show('✅ Assinatura salva!');
+}
+
+function deleteSubscription(id) {
+  if(!confirm('Excluir esta assinatura?')) return;
+  Store.update(s=>{ s.subscriptions=s.subscriptions.filter(s=>s.id!==id); });
+  Toast.show('🗑️ Assinatura excluída','yellow');
+}
+
+function saveCard() {
+  const name = document.getElementById('card-name').value.trim();
+  const limit = parseFloat(document.getElementById('card-limit').value)||0;
+  if(!name||!limit) return Toast.show('Preencha nome e limite','red');
+  Store.update(s=>s.cards.push({
+    id:Utils.uid(), name, limit, used:parseFloat(document.getElementById('card-used').value)||0,
+    closeDay:document.getElementById('card-close').value||'—',
+    dueDay:document.getElementById('card-due').value||'—'
+  }));
+  Modal.close(); Toast.show('✅ Cartão salvo!');
+}
+
+function editCard(id) {
+  const s = Store.get();
+  const c = s.cards.find(c=>c.id===id);
+  if(!c) return;
+  Modal.open(`<div class="modal">
+    <div class="modal-title">✏️ Editar Cartão</div>
+    <div class="form-group"><label class="form-label">Nome</label><input class="form-input" id="ec-name" value="${c.name}"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Limite</label><input class="form-input" id="ec-limit" type="number" value="${c.limit}"></div>
+      <div class="form-group"><label class="form-label">Valor Usado</label><input class="form-input" id="ec-used" type="number" value="${c.used}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Dia Fechamento</label><input class="form-input" id="ec-close" value="${c.closeDay}"></div>
+      <div class="form-group"><label class="form-label">Dia Vencimento</label><input class="form-input" id="ec-due" value="${c.dueDay}"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="Modal.close()">Cancelar</button>
+      <button class="btn btn-primary" onclick="updateCard('${id}')">Salvar</button>
+    </div>
+  </div>`);
+}
+
+function updateCard(id) {
+  Store.update(s=>{ const c=s.cards.find(c=>c.id===id); if(c){ c.name=document.getElementById('ec-name').value; c.limit=parseFloat(document.getElementById('ec-limit').value)||0; c.used=parseFloat(document.getElementById('ec-used').value)||0; c.closeDay=document.getElementById('ec-close').value; c.dueDay=document.getElementById('ec-due').value; } });
+  Modal.close(); Toast.show('✅ Cartão atualizado!');
+}
+
+function deleteCard(id) {
+  if(!confirm('Excluir este cartão?')) return;
+  Store.update(s=>{ s.cards=s.cards.filter(c=>c.id!==id); });
+  Toast.show('🗑️ Cartão excluído','yellow');
+}
+
+function saveBill() {
+  const name = document.getElementById('bill-name').value.trim();
+  const amount = parseFloat(document.getElementById('bill-amount').value)||0;
+  if(!name||!amount) return Toast.show('Preencha nome e valor','red');
+  Store.update(s=>s.fixedBills.push({
+    id:Utils.uid(), name, icon:document.getElementById('bill-icon').value,
+    amount, dueDate:document.getElementById('bill-due').value,
+    repeat:document.getElementById('bill-repeat').value, paid:false
+  }));
+  Modal.close(); Toast.show('✅ Conta salva!');
+}
+
+function markBillPaid(id) {
+  Store.update(s=>{ const b=s.fixedBills.find(b=>b.id===id); if(b)b.paid=true; });
+  Toast.show('✅ Conta marcada como paga!');
+}
+
+function deleteBill(id) {
+  if(!confirm('Excluir esta conta?')) return;
+  Store.update(s=>{ s.fixedBills=s.fixedBills.filter(b=>b.id!==id); });
+  Toast.show('🗑️ Conta excluída','yellow');
+}
+
+function saveGoal() {
+  const name = document.getElementById('goal-name').value.trim();
+  const target = parseFloat(document.getElementById('goal-target').value)||0;
+  if(!name||!target) return Toast.show('Preencha nome e valor alvo','red');
+  Store.update(s=>s.goals.push({
+    id:Utils.uid(), name, icon:document.getElementById('goal-icon').value,
+    target, current:parseFloat(document.getElementById('goal-current').value)||0,
+    deadline:document.getElementById('goal-deadline').value||null
+  }));
+  Modal.close(); Toast.show('✅ Meta salva!');
+}
+
+function addGoalProgress(id) {
+  const val = parseFloat(prompt('Quanto deseja adicionar à meta? (R$)'));
+  if(isNaN(val)||val<=0) return;
+  Store.update(s=>{ const g=s.goals.find(g=>g.id===id); if(g)g.current=Math.min(g.current+val,g.target); });
+  Toast.show('✅ Progresso atualizado!');
+}
+
+function deleteGoal(id) {
+  if(!confirm('Excluir esta meta?')) return;
+  Store.update(s=>{ s.goals=s.goals.filter(g=>g.id!==id); });
+  Toast.show('🗑️ Meta excluída','yellow');
+}
+
+function saveBudget() {
+  const category = document.getElementById('bgt-cat').value;
+  const limit = parseFloat(document.getElementById('bgt-limit').value)||0;
+  if(!limit) return Toast.show('Informe o limite','red');
+  Store.update(s=>s.budgets.push({
+    id:Utils.uid(), category, icon:document.getElementById('bgt-icon').value, limit
+  }));
+  Modal.close(); Toast.show('✅ Orçamento salvo!');
+}
+
+function deleteBudget(id) {
+  if(!confirm('Excluir este orçamento?')) return;
+  Store.update(s=>{ s.budgets=s.budgets.filter(b=>b.id!==id); });
+  Toast.show('🗑️ Orçamento excluído','yellow');
+}
+
+// ═══════════════════════════════════════════════════
+// EXPORT FUNCTIONS
+// ═══════════════════════════════════════════════════
+function exportCSV() {
+  const s = Store.get();
+  const rows = [['Data','Descrição','Categoria','Tipo','Valor']];
+  s.transactions.forEach(t => rows.push([t.date, t.description, t.category, t.type, t.amount]));
+  const csv = rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `transacoes_${Utils.today()}.csv`;
+  a.click();
+  Toast.show('📊 CSV exportado!');
+}
+
+function exportReportPDF() {
+  Toast.show('📄 Use Ctrl+P para salvar como PDF','blue');
+  window.print();
+}
+
+function importBackup(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => Store.importJSON(e.target.result);
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════════
+// THEME
+// ═══════════════════════════════════════════════════
+function toggleTheme() {
+  const current = document.documentElement.dataset.theme;
+  setTheme(current === 'light' ? 'dark' : 'light');
+}
+
+function setTheme(t) {
+  document.documentElement.dataset.theme = t;
+  document.getElementById('theme-icon').textContent = t==='light'?'☀️':'🌙';
+  Store.update(s=>{ s.settings.theme=t; });
+}
+
+function setAccent(color) {
+  document.documentElement.style.setProperty('--accent', color);
+  const h = color.slice(1);
+  const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+  document.documentElement.style.setProperty('--accent2', `rgba(${r},${g},${b},0.85)`);
+  Store.update(s=>{ s.settings.accentColor=color; });
+  Toast.show('🎨 Cor atualizada!');
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('collapsed');
+}
+
+// ═══════════════════════════════════════════════════
+// NAV CONFIG
+// ═══════════════════════════════════════════════════
+const NavConfig = [
+  {id:'dashboard',icon:'🏠',label:'Dashboard'},
+  {section:'Finanças'},
+  {id:'transactions',icon:'💸',label:'Lançamentos'},
+  {id:'fixed-bills',icon:'🏦',label:'Contas Fixas'},
+  {id:'cards',icon:'💳',label:'Cartões'},
+  {id:'budget',icon:'🗂️',label:'Orçamento'},
+  {section:'Crescimento'},
+  {id:'goals',icon:'🎯',label:'Metas'},
+  {id:'health',icon:'🏥',label:'Saúde Financeira'},
+  {section:'Gerenciar'},
+  {id:'clients',icon:'👥',label:'Clientes'},
+  {id:'subscriptions',icon:'📦',label:'Assinaturas'},
+  {id:'calendar',icon:'📅',label:'Calendário'},
+  {section:'Sistema'},
+  {id:'reports',icon:'📊',label:'Relatórios'},
+  {id:'backup',icon:'💾',label:'Backup'},
+];
+
+
+// ═══════════════════════════════════════════════════
+// MODULE: MONTHLY CHART (Canvas)
+// ═══════════════════════════════════════════════════
+function drawMonthlyChart() {
+  const canvas = document.getElementById('monthlyChartCanvas');
+  if (!canvas) return;
+
+  const s = Store.get();
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i);
+    const mk = Utils.monthKey(d.toISOString());
+    const inc = s.transactions.filter(t => t.date.startsWith(mk) && t.type === 'entrada').reduce((a, b) => a + b.amount, 0);
+    const exp = s.transactions.filter(t => t.date.startsWith(mk) && t.type === 'saida').reduce((a, b) => a + b.amount, 0);
+    const mLabel = Utils.monthName(d.getMonth()) + '/' + String(d.getFullYear()).slice(2);
+    months.push({ label: mLabel, income: inc, expense: exp, balance: inc - exp });
+  }
+
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.clientWidth || 700;
+  const H = 220;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const cs = getComputedStyle(document.documentElement);
+  const colorGreen  = '#22d3a0';
+  const colorRed    = '#ff4d6a';
+  const colorAccent = cs.getPropertyValue('--accent').trim() || '#6c63ff';
+  const colorBorder = cs.getPropertyValue('--border').trim() || '#2a2d38';
+  const colorText   = cs.getPropertyValue('--text').trim() || '#e8eaf0';
+  const colorText2  = cs.getPropertyValue('--text2').trim() || '#9da3b8';
+  const colorText3  = cs.getPropertyValue('--text3').trim() || '#5c6280';
+  const colorBg3    = cs.getPropertyValue('--bg3').trim() || '#1a1b21';
+
+  const PAD_L = 56, PAD_R = 16, PAD_T = 24, PAD_B = 52;
+  const chartW = W - PAD_L - PAD_R;
+  const chartH = H - PAD_T - PAD_B;
+
+  const maxVal = Math.max(...months.map(m => Math.max(m.income, m.expense, Math.abs(m.balance))), 1);
+
+  // Grid
+  ctx.strokeStyle = colorBorder;
+  ctx.lineWidth = 1;
+  const gridCount = 4;
+  for (let g = 0; g <= gridCount; g++) {
+    const pct = g / gridCount;
+    const y = PAD_T + chartH - pct * chartH;
+    ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(W - PAD_R, y); ctx.stroke();
+    const val = pct * maxVal;
+    const label = val >= 1000 ? 'R$' + (val / 1000).toFixed(0) + 'k' : 'R$' + val.toFixed(0);
+    ctx.fillStyle = colorText3;
+    ctx.font = '9px DM Mono, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(label, PAD_L - 6, y + 4);
+  }
+
+  // Bars
+  const groupW = chartW / 6;
+  const barW = Math.min(groupW * 0.22, 18);
+  const gap = barW * 0.4;
+  const baseY = PAD_T + chartH;
+  const radius = 3;
+
+  function roundRect(ctx, x, y, w, h, r) {
+    if (h < 1) return;
+    r = Math.min(r, h / 2, w / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  months.forEach((m, i) => {
+    const cx = PAD_L + groupW * i + groupW / 2;
+    const isNow = i === 5;
+
+    // Highlight current month
+    if (isNow) {
+      ctx.fillStyle = colorAccent + '0d';
+      ctx.beginPath();
+      ctx.roundRect(PAD_L + groupW * i + 3, PAD_T, groupW - 6, chartH, 6);
+      ctx.fill();
+    }
+
+    const x1 = cx - barW - gap;
+    const x2 = cx - barW / 2;
+    const x3 = cx + gap + barW / 2;
+
+    const hInc = m.income  > 0 ? (m.income  / maxVal) * chartH : 0;
+    const hExp = m.expense > 0 ? (m.expense / maxVal) * chartH : 0;
+    const hBal = Math.abs(m.balance) > 0 ? (Math.abs(m.balance) / maxVal) * chartH : 0;
+    const balColor = m.balance >= 0 ? colorAccent : colorRed;
+
+    ctx.globalAlpha = isNow ? 1 : 0.72;
+
+    // Income bar
+    ctx.fillStyle = colorGreen;
+    roundRect(ctx, x1, baseY - Math.max(hInc, 2), barW, Math.max(hInc, 2), radius);
+
+    // Expense bar
+    ctx.fillStyle = colorRed;
+    roundRect(ctx, x2, baseY - Math.max(hExp, 2), barW, Math.max(hExp, 2), radius);
+
+    // Balance bar
+    ctx.fillStyle = balColor;
+    roundRect(ctx, x3, baseY - Math.max(hBal, 2), barW, Math.max(hBal, 2), radius);
+
+    ctx.globalAlpha = 1;
+
+    // Values on top of bars
+    ctx.font = '8px DM Mono, monospace';
+    ctx.textAlign = 'center';
+    if (hInc > 18) {
+      ctx.fillStyle = colorGreen;
+      ctx.fillText(m.income >= 1000 ? (m.income/1000).toFixed(1)+'k' : m.income.toFixed(0), x1 + barW/2, baseY - hInc - 5);
+    }
+    if (hExp > 18) {
+      ctx.fillStyle = colorRed;
+      ctx.fillText(m.expense >= 1000 ? (m.expense/1000).toFixed(1)+'k' : m.expense.toFixed(0), x2 + barW/2, baseY - hExp - 5);
+    }
+
+    // Month label
+    ctx.font = (isNow ? 'bold ' : '') + '10px Inter, sans-serif';
+    ctx.fillStyle = isNow ? colorText : colorText3;
+    ctx.fillText(m.label, cx, baseY + 16);
+
+    // % variation vs previous month
+    if (i > 0) {
+      const prev = months[i - 1];
+      if (prev.income > 0) {
+        const diff = Math.round((m.income - prev.income) / prev.income * 100);
+        ctx.font = '9px DM Mono, monospace';
+        ctx.fillStyle = diff >= 0 ? colorGreen : colorRed;
+        ctx.fillText((diff >= 0 ? '+' : '') + diff + '%', cx, baseY + 30);
+      }
+    }
+  });
+
+  // Base line
+  ctx.strokeStyle = colorText3;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(PAD_L, baseY); ctx.lineTo(W - PAD_R, baseY); ctx.stroke();
+}
+
+function buildNav() {
+  const nav = document.getElementById('nav-menu');
+  nav.innerHTML = NavConfig.map(item => {
+    if(item.section) return `<div class="nav-section">${item.section}</div>`;
+    return `<div class="nav-item" data-page="${item.id}" onclick="showPage('${item.id}')">
+      <span class="nav-icon">${item.icon}</span>
+      <span class="nav-label">${item.label}</span>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+(function init() {
+  buildNav();
+
+  // Apply saved settings
+  const s = Store.get();
+  if(s.settings.theme === 'light') setTheme('light');
+  if(s.settings.accentColor && s.settings.accentColor !== '#6c63ff') {
+    setAccent(s.settings.accentColor);
+  }
+
+  Router.render('dashboard');
+
+  // Auto-save indicator
+  setInterval(() => {
+    Store.save();
+  }, 30000);
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape') Modal.close();
+    if(e.ctrlKey && e.key === 'n') { e.preventDefault(); showModal('quick-add-modal'); }
+  });
+})();
+</script>
+</body>
+</html>
