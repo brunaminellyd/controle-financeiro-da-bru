@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Controle Financeiro da Bru</title>
+<title>💰 Controle Financeiro da Bru</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet">
 <style>
@@ -504,7 +504,6 @@ nav{flex:1;overflow-y:auto;padding:10px 0}
       <span class="text-muted" style="font-size:12px">Atalhos:</span>
       <button class="btn btn-ghost btn-sm" onclick="showModal('quick-add-modal')">＋ Transação</button>
       <button class="btn btn-ghost btn-sm" onclick="showModal('add-client-modal')">＋ Cliente</button>
-      <button class="btn btn-ghost btn-sm" onclick="showModal('add-subscription-modal')">＋ Assinatura</button>
       <button class="btn btn-ghost btn-sm" onclick="showModal('add-card-modal')">＋ Cartão</button>
     </div>
   </div>
@@ -529,6 +528,7 @@ const Store = (() => {
     goals: [],
     fixedBills: [],
     budgets: [],
+    recurrences: [],
     settings: {
       theme: 'dark',
       accentColor: '#6c63ff',
@@ -678,7 +678,7 @@ const Router = {
     document.querySelectorAll('.nav-item').forEach(i => {
       i.classList.toggle('active', i.dataset.page === name);
     });
-    document.getElementById('page-title').textContent = NavConfig.find(n=>n.id===name)?.label || '';
+    const navItem = NavConfig.find(n=>n.id===name); document.getElementById('page-title').textContent = navItem ? navItem.icon+' '+navItem.label : '';
   }
 };
 function showPage(name) { Router.render(name); closeMobileDrawer(); }
@@ -756,6 +756,67 @@ const HealthScore = {
 };
 
 // ═══════════════════════════════════════════════════
+// MODULE: RECURRENCES
+// ═══════════════════════════════════════════════════
+const Recurrences = {
+  // Retorna recorrências que ainda NÃO têm lançamento no mês atual
+  pendingThisMonth(type) {
+    const s = Store.get();
+    const now = Utils.monthKey();
+    return (s.recurrences || []).filter(r => {
+      if(type && r.type !== type) return false;
+      if(!r.active) return false;
+      // Verifica se já foi lançada este mês (busca por recurrence_id)
+      const alreadyLaunched = s.transactions.some(t =>
+        t.recurrenceId === r.id && t.date.startsWith(now)
+      );
+      return !alreadyLaunched;
+    });
+  },
+
+  // Aplica automaticamente as recorrências pendentes do mês atual
+  applyPending() {
+    const s = Store.get();
+    const now = Utils.monthKey();
+    const today = Utils.today();
+    const pending = this.pendingThisMonth();
+    if(pending.length === 0) return 0;
+
+    let count = 0;
+    Store.update(st => {
+      pending.forEach(r => {
+        // Dia de lançamento: usa o dia cadastrado ou hoje
+        const day = String(Math.min(r.day || 1, new Date(now+'-01T12:00:00').getMonth() === new Date().getMonth() ? new Date().getDate() : 28)).padStart(2,'0');
+        const date = now + '-' + day;
+        st.transactions.push({
+          id: Utils.uid(),
+          recurrenceId: r.id,
+          type: r.type,
+          description: r.name + ' (auto)',
+          amount: r.amount,
+          category: r.category,
+          date: date > today ? today : date,
+          installment: '',
+          note: 'Lançado automaticamente'
+        });
+        count++;
+      });
+    });
+    return count;
+  },
+
+  // Resumo mensal (recorrentes + assinaturas)
+  monthlyCommitments() {
+    const s = Store.get();
+    const recs = (s.recurrences || []).filter(r => r.active);
+    const incomeRec  = recs.filter(r=>r.type==='entrada').reduce((a,b)=>a+b.amount,0);
+    const expenseRec = recs.filter(r=>r.type==='saida').reduce((a,b)=>a+b.amount,0);
+    const subExp     = s.subscriptions.filter(s=>s.frequency==='mensal').reduce((a,b)=>a+b.amount,0);
+    return { incomeRec, expenseRec, subExp, totalExpense: expenseRec + subExp };
+  }
+};
+
+// ═══════════════════════════════════════════════════
 // MODULE: PROJECTIONS
 // ═══════════════════════════════════════════════════
 const Projections = {
@@ -786,6 +847,13 @@ const Projections = {
         }
       });
 
+      // Recorrências ainda não lançadas (entradas e saídas)
+      const pendingRec = Recurrences.pendingThisMonth();
+      pendingRec.forEach(r => {
+        if(r.type === 'entrada') balance += r.amount;
+        else balance -= r.amount;
+      });
+
       // Expected client payments
       s.clients.filter(c=>c.status==='pendente' && c.expectedDate >= now && c.expectedDate <= futureDateStr)
         .forEach(c => balance += c.amount);
@@ -795,9 +863,26 @@ const Projections = {
   },
   currentBalance() {
     const s = Store.get();
-    const income = s.transactions.filter(t=>t.type==='entrada').reduce((a,b)=>a+b.amount,0);
+    const income  = s.transactions.filter(t=>t.type==='entrada').reduce((a,b)=>a+b.amount,0);
     const expense = s.transactions.filter(t=>t.type==='saida').reduce((a,b)=>a+b.amount,0);
     return income - expense;
+  },
+  // Saldo projetado considerando recorrências do mês atual ainda não lançadas
+  projectedMonthBalance() {
+    const s = Store.get();
+    const now = Utils.monthKey();
+    const txIncome  = s.transactions.filter(t=>t.type==='entrada'&&t.date.startsWith(now)).reduce((a,b)=>a+b.amount,0);
+    const txExpense = s.transactions.filter(t=>t.type==='saida'  &&t.date.startsWith(now)).reduce((a,b)=>a+b.amount,0);
+    // Recorrências ativas do mês ainda não lançadas
+    const recIncome  = Recurrences.pendingThisMonth('entrada').reduce((a,b)=>a+b.amount,0);
+    const recExpense = Recurrences.pendingThisMonth('saida').reduce((a,b)=>a+b.amount,0);
+    // Assinaturas mensais (todas contam como saída)
+    const subExpense = s.subscriptions.filter(s=>s.frequency==='mensal').reduce((a,b)=>a+b.amount,0);
+    return {
+      income:  txIncome  + recIncome,
+      expense: txExpense + txExpense*0 + recExpense + subExpense,
+      balance: (txIncome + recIncome) - (txExpense + recExpense + subExpense),
+    };
   }
 };
 
@@ -867,10 +952,11 @@ Router.register('dashboard', () => {
           <div class="stat-value" style="color:#5a0a1a;font-size:26px">${Utils.fmtShort(expense)}</div>
           <div class="stat-sub" style="color:rgba(0,0,0,.45)">Este mês</div>
         </div>
-        <div class="stat-box card-yellow" style="border-radius:18px">
+        <div class="stat-box card-yellow" style="border-radius:18px;cursor:pointer" onclick="showPage('recurrences')">
           <div class="stat-label" style="color:rgba(0,0,0,.5)">Saldo</div>
           <div class="stat-value" style="color:${balance>=0?'#2a4a1a':'#5a0a1a'};font-size:26px">${Utils.fmtShort(balance)}</div>
           <div class="stat-sub" style="color:rgba(0,0,0,.45)">${balance>=0?'Positivo':'Negativo'}</div>
+          ${(()=>{ const cm=Recurrences.monthlyCommitments(); return cm.totalExpense>0?`<div style="font-size:10px;color:rgba(0,0,0,.4);margin-top:6px">🔁 ${Utils.fmtShort(cm.totalExpense)} fixos/mês</div>`:''; })()}
         </div>
         <div class="stat-box card-lilac" style="border-radius:18px">
           <div class="stat-label" style="color:rgba(0,0,0,.5)">A Receber</div>
@@ -878,9 +964,9 @@ Router.register('dashboard', () => {
           <div class="stat-sub" style="color:rgba(0,0,0,.45)">${pendingClients.length} cliente(s)</div>
         </div>
         <div class="stat-box card-sky" style="border-radius:18px">
-          <div class="stat-label" style="color:rgba(0,0,0,.5)">Assinaturas</div>
-          <div class="stat-value" style="color:#0a2a5a;font-size:26px">${Utils.fmtShort(s.subscriptions.reduce((a,b)=>a+b.amount,0))}</div>
-          <div class="stat-sub" style="color:rgba(0,0,0,.45)">${s.subscriptions.length} ativa(s)</div>
+          <div class="stat-label" style="color:rgba(0,0,0,.5)">Fixos/mês</div>
+          <div class="stat-value" style="color:#0a2a5a;font-size:26px">${(()=>{const cm=Recurrences.monthlyCommitments();return Utils.fmtShort(cm.totalExpense);})()} </div>
+          <div class="stat-sub" style="color:rgba(0,0,0,.45)">${s.subscriptions.length} assin. + ${(s.recurrences||[]).filter(r=>r.active&&r.type==='saida').length} recorr.</div>
         </div>
         <div class="stat-box card-peach" style="border-radius:18px">
           <div class="stat-label" style="color:rgba(0,0,0,.5)">Em Atraso</div>
@@ -992,40 +1078,276 @@ Router.register('dashboard', () => {
 // ═══════════════════════════════════════════════════
 Router.register('transactions', () => {
   const s = Store.get();
-  const sorted = [...s.transactions].sort((a,b)=>b.date.localeCompare(a.date));
-  const filterMonth = Utils.monthKey();
+  const currentMk = Utils.monthKey();
 
-  return `<div>
-    <div class="flex items-center justify-between mb16">
-      <h2 class="section-title">💸 Lançamentos</h2>
-      <div class="flex gap8">
+  // Agrupar por mês
+  const byMonth = {};
+  s.transactions.forEach(t => {
+    const mk = t.date.slice(0,7);
+    if(!byMonth[mk]) byMonth[mk] = [];
+    byMonth[mk].push(t);
+  });
+
+  // Ordenar meses do mais recente para o mais antigo
+  const monthKeys = Object.keys(byMonth).sort((a,b) => b.localeCompare(a));
+
+  if(monthKeys.length === 0) {
+    return `<div>
+      <div style="justify-content:flex-end;display:flex;margin-bottom:16px">
         <button class="btn btn-primary" onclick="showModal('quick-add-modal')">＋ Novo</button>
       </div>
+      <div class="card"><div class="empty-state"><div class="empty-icon">📋</div><p>Nenhuma transação ainda.<br>Clique em + Novo para começar.</p></div></div>
+    </div>`;
+  }
+
+  const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+  const blocks = monthKeys.map(mk => {
+    const txs = byMonth[mk].sort((a,b) => b.date.localeCompare(a.date));
+    const income  = txs.filter(t=>t.type==='entrada').reduce((a,b)=>a+b.amount,0);
+    const expense = txs.filter(t=>t.type==='saida').reduce((a,b)=>a+b.amount,0);
+    const balance = income - expense;
+    const isCurrentMonth = mk === currentMk;
+    const [y, m] = mk.split('-');
+    const monthLabel = monthNames[parseInt(m)-1] + ' ' + y;
+
+    return `
+    <div class="tx-month-block" id="txblock-${mk}" style="margin-bottom:10px">
+      <!-- CABEÇALHO CLICÁVEL -->
+      <div onclick="toggleTxMonth('${mk}')"
+        style="
+          display:flex;align-items:center;justify-content:space-between;
+          background:${isCurrentMonth ? 'var(--accent)' : 'var(--sidebar-bg)'};
+          color:${isCurrentMonth ? '#fff' : 'var(--sidebar-text)'};
+          border-radius:16px;padding:14px 20px;cursor:pointer;
+          transition:all .2s;user-select:none;
+          box-shadow:${isCurrentMonth ? '0 4px 16px rgba(247,81,139,.3)' : 'none'};
+        "
+        onmouseover="this.style.opacity='.9'"
+        onmouseout="this.style.opacity='1'"
+      >
+        <div style="display:flex;align-items:center;gap:14px">
+          <span style="font-family:var(--font-head);font-size:16px;font-weight:800">${monthLabel}</span>
+          <span style="font-size:12px;opacity:.7">${txs.length} lançamento${txs.length!==1?'s':''}</span>
+          ${isCurrentMonth ? '<span style="font-size:11px;background:rgba(255,255,255,.2);padding:2px 10px;border-radius:20px;font-weight:700">Mês atual</span>' : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:20px">
+          <div style="text-align:right">
+            <div style="font-size:10px;opacity:.65;font-weight:600;letter-spacing:.08em;text-transform:uppercase">Entradas</div>
+            <div style="font-family:var(--font-mono);font-size:13px;color:${isCurrentMonth?'rgba(255,255,255,.9)':'var(--green)'}">${Utils.fmt(income)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:10px;opacity:.65;font-weight:600;letter-spacing:.08em;text-transform:uppercase">Saídas</div>
+            <div style="font-family:var(--font-mono);font-size:13px;color:${isCurrentMonth?'rgba(255,255,255,.9)':'var(--red)'}">${Utils.fmt(expense)}</div>
+          </div>
+          <div style="text-align:right;min-width:90px">
+            <div style="font-size:10px;opacity:.65;font-weight:600;letter-spacing:.08em;text-transform:uppercase">Saldo</div>
+            <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:${isCurrentMonth?'#fff':balance>=0?'var(--green)':'var(--red)'}">${Utils.fmt(balance)}</div>
+          </div>
+          <div id="txarrow-${mk}" style="font-size:18px;transition:transform .25s;transform:${isCurrentMonth?'rotate(0deg)':'rotate(-90deg)'}"
+          >▾</div>
+        </div>
+      </div>
+
+      <!-- TABELA RECOLHÍVEL -->
+      <div id="txcontent-${mk}" style="display:${isCurrentMonth?'block':'none'};margin-top:4px">
+        <div class="card" style="padding:0;overflow:hidden">
+          <table class="data-table">
+            <thead><tr>
+              <th>Data</th><th>Descrição</th><th>Categoria</th><th>Tipo</th><th>Valor</th><th>Parcela</th><th>Ações</th>
+            </tr></thead>
+            <tbody>
+              ${txs.map(t=>`
+                <tr>
+                  <td class="font-mono" style="font-size:12px">${Utils.fmtDate(t.date)}</td>
+                  <td>${t.description}</td>
+                  <td><span class="chip chip-gray">${t.category}</span></td>
+                  <td><span class="chip ${t.type==='entrada'?'chip-green':'chip-red'}">${t.type==='entrada'?'↑ Entrada':'↓ Saída'}</span></td>
+                  <td class="font-mono ${t.type==='entrada'?'text-green':'text-red'}">${Utils.fmt(t.amount)}</td>
+                  <td style="font-size:12px;color:var(--text3)">${t.installment||'—'}</td>
+                  <td style="display:flex;gap:4px">
+                    <button class="icon-btn" onclick="editTransaction('${t.id}')" title="Editar">✏️</button>
+                    <button class="icon-btn" onclick="deleteTransaction('${t.id}')" title="Excluir">🗑️</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div>
+    <div style="justify-content:flex-end;display:flex;margin-bottom:16px">
+      <button class="btn btn-primary" onclick="showModal('quick-add-modal')">＋ Novo</button>
     </div>
-    <div class="card">
+    ${blocks}
+  </div>`;
+});
+
+function toggleTxMonth(mk) {
+  const content = document.getElementById('txcontent-'+mk);
+  const arrow   = document.getElementById('txarrow-'+mk);
+  if(!content) return;
+  const isOpen = content.style.display !== 'none';
+  content.style.display = isOpen ? 'none' : 'block';
+  if(arrow) arrow.style.transform = isOpen ? 'rotate(-90deg)' : 'rotate(0deg)';
+}
+
+// ═══════════════════════════════════════════════════
+// PAGE: RECURRENCES
+// ═══════════════════════════════════════════════════
+Router.register('recurrences', () => {
+  const s = Store.get();
+  const recs = s.recurrences || [];
+  const cm = Recurrences.monthlyCommitments();
+  const pending = Recurrences.pendingThisMonth();
+  const now = Utils.monthKey();
+  const nowMonthName = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][new Date().getMonth()];
+
+  const recEntradas = recs.filter(r=>r.type==='entrada'&&r.active);
+  const recSaidas   = recs.filter(r=>r.type==='saida'&&r.active);
+  const recInativas = recs.filter(r=>!r.active);
+
+  return `<div>
+    <!-- BOTÕES TOPO -->
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:16px">
+      ${pending.length > 0 ? `<button class="btn btn-ghost" onclick="applyRecurrencesNow()" style="border-color:var(--green);color:var(--green)">
+        ⚡ Lançar ${pending.length} pendente${pending.length!==1?'s':''} agora
+      </button>` : ''}
+      <button class="btn btn-primary" onclick="showModal('add-recurrence-modal')">＋ Nova Recorrência</button>
+    </div>
+
+    <!-- RESUMO MENSAL -->
+    <div class="grid3 mb16">
+      <div class="stat-box card-olive" style="border-radius:18px">
+        <div class="stat-label" style="color:rgba(0,0,0,.5)">Entradas Fixas/mês</div>
+        <div class="stat-value" style="color:#1a3a1a;font-size:24px">${Utils.fmt(cm.incomeRec)}</div>
+        <div class="stat-sub" style="color:rgba(0,0,0,.45)">${recEntradas.length} recorrência${recEntradas.length!==1?'s':''}</div>
+      </div>
+      <div class="stat-box card-pink" style="border-radius:18px">
+        <div class="stat-label" style="color:rgba(0,0,0,.5)">Saídas Fixas/mês</div>
+        <div class="stat-value" style="color:#5a0a1a;font-size:24px">${Utils.fmt(cm.totalExpense)}</div>
+        <div class="stat-sub" style="color:rgba(0,0,0,.45)">${recSaidas.length} recorrência${recSaidas.length!==1?'s':''} + ${s.subscriptions.filter(s=>s.frequency==='mensal').length} assinatura${s.subscriptions.filter(s=>s.frequency==='mensal').length!==1?'s':''}</div>
+      </div>
+      <div class="stat-box card-yellow" style="border-radius:18px">
+        <div class="stat-label" style="color:rgba(0,0,0,.5)">Saldo Recorrente</div>
+        <div class="stat-value" style="color:${cm.incomeRec-cm.totalExpense>=0?'#2a4a1a':'#5a0a1a'};font-size:24px">${Utils.fmt(cm.incomeRec - cm.totalExpense)}</div>
+        <div class="stat-sub" style="color:rgba(0,0,0,.45)">Entradas − Saídas fixas</div>
+      </div>
+    </div>
+
+    <!-- ALERTA PENDENTES -->
+    ${pending.length > 0 ? `
+    <div class="alert alert-yellow mb16">
+      ⏳ <div>
+        <strong>${pending.length} recorrência${pending.length!==1?'s':''} ainda não lançada${pending.length!==1?'s':''} em ${nowMonthName}.</strong>
+        Clique em "Lançar pendentes agora" para registrá-las automaticamente.
+      </div>
+    </div>` : `
+    <div class="alert alert-green mb16">
+      ✅ <div>Todas as recorrências de <strong>${nowMonthName}</strong> já foram lançadas.</div>
+    </div>`}
+
+    <!-- ENTRADAS RECORRENTES -->
+    ${recEntradas.length > 0 ? `
+    <div class="card mb16">
+      <div class="card-header">
+        <span class="card-title">💚 Entradas Recorrentes</span>
+        <span class="font-mono text-green" style="font-size:13px">${Utils.fmt(cm.incomeRec)}/mês</span>
+      </div>
       <table class="data-table">
-        <thead><tr>
-          <th>Data</th><th>Descrição</th><th>Categoria</th><th>Tipo</th><th>Valor</th><th>Parcela</th><th>Ações</th>
-        </tr></thead>
+        <thead><tr><th>Nome</th><th>Categoria</th><th>Valor</th><th>Dia</th><th>Lançado este mês?</th><th>Ações</th></tr></thead>
         <tbody>
-        ${sorted.length === 0 ? `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3)">Nenhuma transação. Clique em + Novo para começar.</td></tr>` :
-          sorted.map(t=>`
-            <tr>
-              <td class="font-mono" style="font-size:12px">${Utils.fmtDate(t.date)}</td>
-              <td>${t.description}</td>
-              <td><span class="chip chip-gray">${t.category}</span></td>
-              <td><span class="chip ${t.type==='entrada'?'chip-green':'chip-red'}">${t.type==='entrada'?'↑ Entrada':'↓ Saída'}</span></td>
-              <td class="font-mono ${t.type==='entrada'?'text-green':'text-red'}">${Utils.fmt(t.amount)}</td>
-              <td style="font-size:12px;color:var(--text3)">${t.installment||'—'}</td>
-              <td>
-                <button class="icon-btn" onclick="editTransaction('${t.id}')" title="Editar">✏️</button>
-                <button class="icon-btn" onclick="deleteTransaction('${t.id}')" title="Excluir">🗑️</button>
-              </td>
-            </tr>
-          `).join('')}
+        ${recEntradas.map(r => {
+          const launched = s.transactions.some(t => t.recurrenceId === r.id && t.date.startsWith(now));
+          return `<tr>
+            <td><strong>${r.icon||'💰'} ${r.name}</strong></td>
+            <td><span class="chip chip-gray">${r.category}</span></td>
+            <td class="font-mono text-green">${Utils.fmt(r.amount)}</td>
+            <td>Dia ${r.day||1}</td>
+            <td>${launched
+              ? '<span class="chip chip-green">✅ Sim</span>'
+              : '<span class="chip chip-yellow">⏳ Pendente</span>'}</td>
+            <td style="display:flex;gap:4px">
+              <button class="icon-btn" onclick="toggleRecurrence('${r.id}')">⏸️</button>
+              <button class="icon-btn" onclick="deleteRecurrence('${r.id}')">🗑️</button>
+            </td>
+          </tr>`;
+        }).join('')}
         </tbody>
       </table>
-    </div>
+    </div>` : ''}
+
+    <!-- SAÍDAS RECORRENTES -->
+    ${recSaidas.length > 0 ? `
+    <div class="card mb16">
+      <div class="card-header">
+        <span class="card-title">🔴 Saídas Recorrentes</span>
+        <span class="font-mono text-red" style="font-size:13px">${Utils.fmt(cm.expenseRec)}/mês</span>
+      </div>
+      <table class="data-table">
+        <thead><tr><th>Nome</th><th>Categoria</th><th>Valor</th><th>Dia</th><th>Lançado este mês?</th><th>Ações</th></tr></thead>
+        <tbody>
+        ${recSaidas.map(r => {
+          const launched = s.transactions.some(t => t.recurrenceId === r.id && t.date.startsWith(now));
+          return `<tr>
+            <td><strong>${r.icon||'💸'} ${r.name}</strong></td>
+            <td><span class="chip chip-gray">${r.category}</span></td>
+            <td class="font-mono text-red">${Utils.fmt(r.amount)}</td>
+            <td>Dia ${r.day||1}</td>
+            <td>${launched
+              ? '<span class="chip chip-green">✅ Sim</span>'
+              : '<span class="chip chip-yellow">⏳ Pendente</span>'}</td>
+            <td style="display:flex;gap:4px">
+              <button class="icon-btn" onclick="toggleRecurrence('${r.id}')">⏸️</button>
+              <button class="icon-btn" onclick="deleteRecurrence('${r.id}')">🗑️</button>
+            </td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>
+    </div>` : ''}
+
+    <!-- ASSINATURAS MENSAIS (read-only aqui) -->
+    ${s.subscriptions.filter(s=>s.frequency==='mensal').length > 0 ? `
+    <div class="card mb16">
+      <div class="card-header">
+        <span class="card-title">📦 Assinaturas Mensais</span>
+        <div class="flex gap8 items-center">
+          <span class="font-mono text-red" style="font-size:13px">${Utils.fmt(cm.subExp)}/mês</span>
+          <button class="btn btn-ghost btn-sm" onclick="showModal('quick-add-modal')">＋ Nova</button>
+        </div>
+      </div>
+      <table class="data-table">
+        <thead><tr><th>Nome</th><th>Valor</th><th>Renovação</th></tr></thead>
+        <tbody>
+        ${s.subscriptions.filter(s=>s.frequency==='mensal').map(sub=>`
+          <tr>
+            <td>${sub.icon||'📦'} <strong>${sub.name}</strong></td>
+            <td class="font-mono text-red">${Utils.fmt(sub.amount)}</td>
+            <td>${Utils.fmtDate(sub.renewalDate)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>` : ''}
+
+    <!-- INATIVAS -->
+    ${recInativas.length > 0 ? `
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title" style="color:var(--text3)">⏸️ Pausadas</span>
+      </div>
+      ${recInativas.map(r=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);opacity:.6">
+          <span>${r.icon||'💸'} ${r.name} · ${Utils.fmt(r.amount)}</span>
+          <button class="btn btn-ghost btn-sm" onclick="toggleRecurrence('${r.id}')">▶ Reativar</button>
+        </div>`).join('')}
+    </div>` : ''}
+
+    ${recs.length === 0 ? `<div class="card"><div class="empty-state"><div class="empty-icon">🔁</div>
+      <p>Nenhuma recorrência cadastrada.<br>Adicione entradas e saídas que se repetem todo mês.</p></div></div>` : ''}
   </div>`;
 });
 
@@ -1049,8 +1371,6 @@ Router.register('health', () => {
   const healthMsg = health.level==='excellent'?'🟢 Sua situação financeira está equilibrada.':health.level==='attention'?'🟡 Alguns pontos precisam de atenção.':'🔴 Sua previsão financeira exige ajustes.';
 
   return `<div>
-    <h2 class="section-title">🏥 Saúde Financeira</h2>
-
     <div class="grid2 mb16" style="grid-template-columns:auto 1fr">
       <div class="card" style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:30px">
         <div class="health-circle" style="width:160px;height:160px">
@@ -1145,8 +1465,7 @@ Router.register('budget', () => {
   expense.forEach(t => { catTotals[t.category] = (catTotals[t.category]||0) + t.amount; });
 
   return `<div>
-    <div class="flex items-center justify-between mb16">
-      <h2 class="section-title">🗂️ Orçamento Mensal</h2>
+    <div class="flex items-center mb16" style="justify-content:flex-end">
       <button class="btn btn-primary" onclick="showModal('add-budget-modal')">＋ Categoria</button>
     </div>
     ${s.budgets.length === 0 ? `
@@ -1198,8 +1517,7 @@ Router.register('subscriptions', () => {
   const upcoming = [...subs].filter(s=>s.renewalDate>=today).sort((a,b)=>a.renewalDate.localeCompare(b.renewalDate)).slice(0,3);
 
   return `<div>
-    <div class="flex items-center justify-between mb16">
-      <h2 class="section-title">📦 Assinaturas</h2>
+    <div class="flex items-center mb16" style="justify-content:flex-end">
       <button class="btn btn-primary" onclick="showModal('add-subscription-modal')">＋ Nova Assinatura</button>
     </div>
     <div class="grid3 mb16">
@@ -1373,7 +1691,7 @@ function renderCalendar(year, month) {
 
   return `<div>
     <div class="flex items-center justify-between mb12">
-      <h2 class="section-title" style="margin-bottom:0">📅 Calendário Financeiro</h2>
+
       <div class="flex gap8 items-center">
         <button class="icon-btn" onclick="navCalendar(${month===0?year-1:year},${month===0?11:month-1})">‹</button>
         <span style="font-weight:700;font-size:15px;min-width:110px;text-align:center">${Utils.monthName(month)} ${year}</span>
@@ -1580,8 +1898,7 @@ Router.register('fixed-bills', () => {
   const dueSoon = bills.filter(b=>!b.paid&&b.dueDate>=today&&Utils.daysUntil(b.dueDate)<=7);
 
   return `<div>
-    <div class="flex items-center justify-between mb16">
-      <h2 class="section-title">🏦 Contas Fixas</h2>
+    <div class="flex items-center mb16" style="justify-content:flex-end">
       <button class="btn btn-primary" onclick="showModal('add-bill-modal')">＋ Nova Conta</button>
     </div>
     ${overdue.length > 0 ? `<div class="alert alert-red mb12">⚠️ ${overdue.length} conta(s) em atraso! ${overdue.map(b=>b.name).join(', ')}</div>` : ''}
@@ -1624,8 +1941,7 @@ Router.register('cards', () => {
   const totalUsed = cards.reduce((a,b)=>a+b.used,0);
 
   return `<div>
-    <div class="flex items-center justify-between mb16">
-      <h2 class="section-title">💳 Central de Cartões</h2>
+    <div class="flex items-center mb16" style="justify-content:flex-end">
       <button class="btn btn-primary" onclick="showModal('add-card-modal')">＋ Novo Cartão</button>
     </div>
     <div class="grid3 mb16">
@@ -1700,8 +2016,7 @@ Router.register('clients', () => {
   const statusIcon = {pago:'✅',pendente:'⏳',atrasado:'⚠️',agendado:'📅'};
 
   return `<div>
-    <div class="flex items-center justify-between mb16">
-      <h2 class="section-title">👥 Central de Clientes</h2>
+    <div class="flex items-center mb16" style="justify-content:flex-end">
       <button class="btn btn-primary" onclick="showModal('add-client-modal')">＋ Novo Cliente</button>
     </div>
     <div class="grid4 mb16">
@@ -1758,8 +2073,7 @@ Router.register('goals', () => {
   const s = Store.get();
   const goals = s.goals;
   return `<div>
-    <div class="flex items-center justify-between mb16">
-      <h2 class="section-title">🎯 Metas Financeiras</h2>
+    <div class="flex items-center mb16" style="justify-content:flex-end">
       <button class="btn btn-primary" onclick="showModal('add-goal-modal')">＋ Nova Meta</button>
     </div>
     ${goals.length === 0 ? `<div class="card"><div class="empty-state"><div class="empty-icon">🎯</div><p>Nenhuma meta cadastrada. Defina seus objetivos!</p></div></div>` :
@@ -1825,13 +2139,10 @@ Router.register('reports', () => {
   const maxMonth = Math.max(...months.map(m=>Math.max(m.income,m.expense)),1);
 
   return `<div>
-    <div class="flex items-center justify-between mb16">
-      <h2 class="section-title">📊 Relatórios</h2>
-      <div class="flex gap8">
+    <div class="flex gap8 mb16" style="justify-content:flex-end">
         <button class="btn btn-ghost" onclick="exportReportPDF()">📄 PDF</button>
         <button class="btn btn-ghost" onclick="Store.exportJSON()">📦 JSON</button>
         <button class="btn btn-ghost" onclick="exportCSV()">📊 CSV</button>
-      </div>
     </div>
 
     <div class="grid2 mb16">
@@ -1909,7 +2220,6 @@ Router.register('reports', () => {
 // ═══════════════════════════════════════════════════
 Router.register('backup', () => {
   return `<div>
-    <h2 class="section-title">💾 Backup & Configurações</h2>
     <div class="grid2">
       <div class="card">
         <div class="card-title mb16">💾 Backup de Dados</div>
@@ -1965,7 +2275,11 @@ const ModalHandlers = {
       <div style="display:flex;gap:4px;background:var(--bg3);border-radius:14px;padding:5px;margin-bottom:20px;border:2px solid var(--border)">
         <button id="tab-single" onclick="switchTxTab('single')"
           style="flex:1;padding:9px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;background:var(--bg2);color:var(--text);border:2px solid var(--border)">
-          📝 Lançamento Único
+          📝 Único
+        </button>
+        <button id="tab-installment" onclick="switchTxTab('installment')"
+          style="flex:1;padding:9px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;background:transparent;color:var(--text2);border:2px solid transparent">
+          🔢 Parcelado
         </button>
         <button id="tab-batch" onclick="switchTxTab('batch')"
           style="flex:1;padding:9px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;background:transparent;color:var(--text2);border:2px solid transparent">
@@ -1975,16 +2289,29 @@ const ModalHandlers = {
 
       <!-- ÚNICO -->
       <div id="panel-single">
+        <!-- Tipo: Entrada / Saída -->
         <div class="form-group">
           <label class="form-label">Tipo</label>
           <div class="flex gap8">
             <button id="btn-entrada" class="btn btn-primary flex-1" onclick="selectTxType('entrada')">💚 Entrada</button>
-            <button id="btn-saida" class="btn btn-ghost flex-1" onclick="selectTxType('saida')">🔴 Saída</button>
+            <button id="btn-saida"   class="btn btn-ghost   flex-1" onclick="selectTxType('saida')">🔴 Saída</button>
           </div>
           <input type="hidden" id="tx-type" value="entrada">
         </div>
+
+        <!-- Natureza: avulso / recorrente / assinatura -->
+        <div class="form-group">
+          <label class="form-label">Natureza</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+            <button id="nat-btn-avulso"     class="btn btn-primary"  style="justify-content:center" onclick="selectTxNature('avulso')">🔹 Avulso</button>
+            <button id="nat-btn-recorrente" class="btn btn-ghost"    style="justify-content:center" onclick="selectTxNature('recorrente')">🔁 Recorrente</button>
+            <button id="nat-btn-assinatura" class="btn btn-ghost"    style="justify-content:center" onclick="selectTxNature('assinatura')">📦 Assinatura</button>
+          </div>
+          <input type="hidden" id="tx-nature" value="avulso">
+        </div>
+
         <div class="form-row">
-          <div class="form-group"><label class="form-label">Descrição</label><input class="form-input" id="tx-desc" placeholder="Ex: Salário, Aluguel..."></div>
+          <div class="form-group"><label class="form-label">Descrição</label><input class="form-input" id="tx-desc" placeholder="Ex: Salário, Netflix..."></div>
           <div class="form-group"><label class="form-label">Valor (R$)</label><input class="form-input" id="tx-amount" type="number" min="0" step="0.01" placeholder="0,00"></div>
         </div>
         <div class="form-row">
@@ -1996,13 +2323,96 @@ const ModalHandlers = {
           </div>
           <div class="form-group"><label class="form-label">Data</label><input class="form-input" id="tx-date" type="date" value="${Utils.today()}"></div>
         </div>
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Parcela (ex: 1/6)</label><input class="form-input" id="tx-installment" placeholder="—"></div>
-          <div class="form-group"><label class="form-label">Observação</label><input class="form-input" id="tx-note" placeholder="Opcional"></div>
+
+        <!-- Campos extras: dia do mês (recorrente/assinatura) -->
+        <div id="tx-extra-recurrent" style="display:none">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Dia do mês que cai</label>
+              <input class="form-input" id="tx-day" type="number" min="1" max="28" placeholder="Ex: 5" value="1">
+            </div>
+            <div class="form-group"><label class="form-label">Observação</label><input class="form-input" id="tx-note" placeholder="Opcional"></div>
+          </div>
+          <div style="background:var(--bg3);border-radius:12px;padding:10px 14px;font-size:12px;color:var(--text2);border:1px solid var(--border);margin-bottom:14px">
+            🔁 Este lançamento ficará <strong>pendente todo mês</strong> no dia informado para você confirmar ou lançar com um clique.
+          </div>
         </div>
+
+        <!-- Campos extras: renovação (assinatura) -->
+        <div id="tx-extra-subscription" style="display:none">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Frequência</label>
+              <select class="form-input form-select" id="tx-freq">
+                <option value="mensal">🔁 Mensal</option>
+                <option value="anual">📅 Anual</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label">Próxima renovação</label><input class="form-input" id="tx-renewal" type="date" value="${Utils.today()}"></div>
+          </div>
+          <div style="background:var(--bg3);border-radius:12px;padding:10px 14px;font-size:12px;color:var(--text2);border:1px solid var(--border);margin-bottom:14px">
+            📦 Assinaturas aparecem nos <strong>gastos fixos mensais</strong> e no calendário de vencimentos.
+          </div>
+        </div>
+
+        <!-- Parcela (só avulso) -->
+        <div id="tx-extra-avulso">
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Parcela (ex: 1/6)</label><input class="form-input" id="tx-installment" placeholder="—"></div>
+            <div class="form-group"><label class="form-label">Observação</label><input class="form-input" id="tx-note-avulso" placeholder="Opcional"></div>
+          </div>
+        </div>
+
         <div class="modal-footer">
           <button class="btn btn-ghost" onclick="Modal.close()">Cancelar</button>
           <button class="btn btn-primary" onclick="saveTransaction()">Salvar</button>
+        </div>
+      </div>
+
+      <!-- PARCELADO -->
+      <div id="panel-installment" style="display:none">
+        <div style="font-size:13px;color:var(--text2);margin-bottom:16px">
+          Informe o valor total ou o valor de cada parcela. O sistema criará um lançamento para cada mês automaticamente.
+        </div>
+        <div class="form-group">
+          <label class="form-label">Descrição</label>
+          <input class="form-input" id="inst-desc" placeholder="Ex: Geladeira, iPhone, Curso...">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Número de Parcelas</label>
+            <input class="form-input" id="inst-total" type="number" min="2" max="72" value="12" oninput="updateInstallmentPreview()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Valor de Cada Parcela (R$)</label>
+            <input class="form-input" id="inst-amount" type="number" min="0" step="0.01" placeholder="0,00" oninput="updateInstallmentPreview()">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Categoria</label>
+            <select class="form-input form-select" id="inst-cat">
+              ${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Data da 1ª parcela</label>
+            <input class="form-input" id="inst-date" type="date" value="${Utils.today()}" oninput="updateInstallmentPreview()">
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div id="inst-preview" style="background:var(--bg3);border-radius:14px;padding:14px;border:2px solid var(--border);margin-top:4px">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Prévia dos lançamentos</div>
+          <div id="inst-preview-rows" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
+            <span style="color:var(--text3);font-size:12px">Preencha os campos acima para ver a prévia.</span>
+          </div>
+          <div id="inst-preview-total" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:13px;font-weight:700;color:var(--text2)"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="Modal.close()">Cancelar</button>
+          <button class="btn btn-primary" onclick="saveInstallments()">Criar ${`<span id="inst-btn-count">0</span>`} Parcelas</button>
         </div>
       </div>
 
@@ -2042,6 +2452,45 @@ const ModalHandlers = {
 
     // Inicializa com 3 linhas no lote
     addBatchRow(); addBatchRow(); addBatchRow();
+  },
+
+  'add-recurrence-modal'() {
+    Modal.open(`<div class="modal">
+      <div class="modal-title">🔁 Nova Recorrência</div>
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <div class="flex gap8">
+          <button id="rec-btn-entrada" class="btn btn-primary flex-1" onclick="selectRecType('entrada')">💚 Entrada</button>
+          <button id="rec-btn-saida"   class="btn btn-ghost   flex-1" onclick="selectRecType('saida')">🔴 Saída</button>
+        </div>
+        <input type="hidden" id="rec-type" value="entrada">
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nome</label><input class="form-input" id="rec-name" placeholder="Ex: Salário, Aluguel..."></div>
+        <div class="form-group"><label class="form-label">Ícone</label>
+          <select class="form-input form-select" id="rec-icon">
+            ${ICONS.map(i=>`<option value="${i}">${i}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Valor (R$)</label><input class="form-input" id="rec-amount" type="number" min="0" step="0.01" placeholder="0,00"></div>
+        <div class="form-group"><label class="form-label">Dia do mês</label><input class="form-input" id="rec-day" type="number" min="1" max="28" placeholder="Ex: 5" value="1"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Categoria</label>
+        <select class="form-input form-select" id="rec-cat">
+          ${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div style="background:var(--bg3);border-radius:12px;padding:10px 14px;font-size:12px;color:var(--text2);border:1px solid var(--border)">
+        💡 Todo mês no dia informado, esse lançamento ficará <strong>pendente</strong> para você confirmar ou lançar automaticamente.
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="Modal.close()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveRecurrence()">Salvar</button>
+      </div>
+    </div>`);
   },
 
   'add-client-modal'() {
@@ -2205,19 +2654,75 @@ const ModalHandlers = {
 function selectTxType(type) {
   document.getElementById('tx-type').value = type;
   document.getElementById('btn-entrada').className = `btn flex-1 ${type==='entrada'?'btn-primary':'btn-ghost'}`;
-  document.getElementById('btn-saida').className = `btn flex-1 ${type==='saida'?'btn-primary':'btn-ghost'}`;
+  document.getElementById('btn-saida').className   = `btn flex-1 ${type==='saida'  ?'btn-primary':'btn-ghost'}`;
+}
+
+function selectTxNature(nature) {
+  document.getElementById('tx-nature').value = nature;
+  ['avulso','recorrente','assinatura'].forEach(n => {
+    const btn = document.getElementById('nat-btn-'+n);
+    if(btn) btn.className = `btn ${n===nature?'btn-primary':'btn-ghost'}`;
+  });
+  const showRec  = nature === 'recorrente';
+  const showSub  = nature === 'assinatura';
+  const showAvul = nature === 'avulso';
+  const er = document.getElementById('tx-extra-recurrent');
+  const es = document.getElementById('tx-extra-subscription');
+  const ea = document.getElementById('tx-extra-avulso');
+  if(er) er.style.display = showRec  ? 'block' : 'none';
+  if(es) es.style.display = showSub  ? 'block' : 'none';
+  if(ea) ea.style.display = showAvul ? 'block' : 'none';
 }
 
 function saveTransaction() {
-  const desc = document.getElementById('tx-desc').value.trim();
-  const amount = parseFloat(document.getElementById('tx-amount').value)||0;
-  const type = document.getElementById('tx-type').value;
-  const cat = document.getElementById('tx-cat').value;
-  const date = document.getElementById('tx-date').value;
+  const desc   = document.getElementById('tx-desc')?.value.trim();
+  const amount = parseFloat(document.getElementById('tx-amount')?.value)||0;
+  const type   = document.getElementById('tx-type')?.value;
+  const cat    = document.getElementById('tx-cat')?.value;
+  const date   = document.getElementById('tx-date')?.value;
+  const nature = document.getElementById('tx-nature')?.value || 'avulso';
+
   if(!desc||!amount||!date) return Toast.show('Preencha todos os campos obrigatórios','red');
-  Store.update(s=>s.transactions.push({id:Utils.uid(),type,description:desc,amount,category:cat,date,installment:document.getElementById('tx-installment').value,note:document.getElementById('tx-note').value}));
-  Modal.close();
-  Toast.show('✅ Transação salva!');
+
+  if(nature === 'recorrente') {
+    // Salva como recorrência
+    const day = parseInt(document.getElementById('tx-day')?.value)||1;
+    const note = document.getElementById('tx-note')?.value||'';
+    Store.update(s => {
+      if(!s.recurrences) s.recurrences = [];
+      s.recurrences.push({ id:Utils.uid(), name:desc, type, amount, day, category:cat, icon:'💰', active:true, note });
+    });
+    // Também lança o mês atual imediatamente
+    Store.update(s => s.transactions.push({
+      id:Utils.uid(), recurrenceId: s.recurrences[s.recurrences.length-1]?.id,
+      type, description:desc, amount, category:cat, date, installment:'', note:'Recorrente'
+    }));
+    Modal.close();
+    Toast.show('🔁 Recorrência salva e lançada este mês!');
+
+  } else if(nature === 'assinatura') {
+    // Salva como assinatura
+    const freq    = document.getElementById('tx-freq')?.value || 'mensal';
+    const renewal = document.getElementById('tx-renewal')?.value || date;
+    Store.update(s => s.subscriptions.push({
+      id:Utils.uid(), name:desc, icon:'📦', amount, renewalDate:renewal, frequency:freq, category:cat
+    }));
+    // Lança como saída também
+    Store.update(s => s.transactions.push({
+      id:Utils.uid(), type:'saida', description:desc+' (assinatura)',
+      amount, category:cat, date, installment:'', note:'Assinatura'
+    }));
+    Modal.close();
+    Toast.show('📦 Assinatura salva e lançada!');
+
+  } else {
+    // Avulso normal
+    const installment = document.getElementById('tx-installment')?.value||'';
+    const note        = document.getElementById('tx-note-avulso')?.value||'';
+    Store.update(s => s.transactions.push({ id:Utils.uid(), type, description:desc, amount, category:cat, date, installment, note }));
+    Modal.close();
+    Toast.show('✅ Transação salva!');
+  }
 }
 
 function editTransaction(id) {
@@ -2260,6 +2765,48 @@ function deleteTransaction(id) {
   if(!confirm('Excluir esta transação?')) return;
   Store.update(s=>{ s.transactions = s.transactions.filter(t=>t.id!==id); });
   Toast.show('🗑️ Transação excluída','yellow');
+}
+
+function selectRecType(type) {
+  document.getElementById('rec-type').value = type;
+  document.getElementById('rec-btn-entrada').className = `btn flex-1 ${type==='entrada'?'btn-primary':'btn-ghost'}`;
+  document.getElementById('rec-btn-saida').className   = `btn flex-1 ${type==='saida'  ?'btn-primary':'btn-ghost'}`;
+}
+
+function saveRecurrence() {
+  const name   = document.getElementById('rec-name').value.trim();
+  const amount = parseFloat(document.getElementById('rec-amount').value)||0;
+  const type   = document.getElementById('rec-type').value;
+  const day    = parseInt(document.getElementById('rec-day').value)||1;
+  const cat    = document.getElementById('rec-cat').value;
+  const icon   = document.getElementById('rec-icon').value;
+  if(!name||!amount) return Toast.show('Preencha nome e valor','red');
+  Store.update(s => {
+    if(!s.recurrences) s.recurrences = [];
+    s.recurrences.push({ id:Utils.uid(), name, type, amount, day, category:cat, icon, active:true });
+  });
+  Modal.close();
+  Toast.show('✅ Recorrência salva!');
+}
+
+function toggleRecurrence(id) {
+  Store.update(s => {
+    const r = (s.recurrences||[]).find(r=>r.id===id);
+    if(r) r.active = !r.active;
+  });
+  Toast.show('🔁 Recorrência atualizada');
+}
+
+function deleteRecurrence(id) {
+  if(!confirm('Excluir esta recorrência?')) return;
+  Store.update(s => { s.recurrences = (s.recurrences||[]).filter(r=>r.id!==id); });
+  Toast.show('🗑️ Recorrência excluída','yellow');
+}
+
+function applyRecurrencesNow() {
+  const count = Recurrences.applyPending();
+  if(count > 0) Toast.show(`✅ ${count} lançamento${count!==1?'s':''} registrado${count!==1?'s':''}!`);
+  else Toast.show('Nenhuma recorrência pendente','yellow');
 }
 
 function saveClient() {
@@ -2497,7 +3044,6 @@ const NavConfig = [
   {id:'health',icon:'🏥',label:'Saúde Financeira'},
   {section:'Gerenciar'},
   {id:'clients',icon:'👥',label:'Clientes'},
-  {id:'subscriptions',icon:'📦',label:'Assinaturas'},
   {id:'calendar',icon:'📅',label:'Calendário'},
   {section:'Sistema'},
   {id:'reports',icon:'📊',label:'Relatórios'},
@@ -2667,18 +3213,92 @@ function drawMonthlyChart() {
 // BATCH TRANSACTIONS
 // ═══════════════════════════════════════════════════
 function switchTxTab(tab) {
-  const isSingle = tab === 'single';
-  document.getElementById('panel-single').style.display = isSingle ? 'block' : 'none';
-  document.getElementById('panel-batch').style.display  = isSingle ? 'none'  : 'block';
+  const panels = { single:'panel-single', installment:'panel-installment', batch:'panel-batch' };
+  const tabs    = { single:'tab-single',   installment:'tab-installment',   batch:'tab-batch' };
+  const activeStyle   = 'background:var(--bg2);color:var(--text);border:2px solid var(--border)';
+  const inactiveStyle = 'background:transparent;color:var(--text2);border:2px solid transparent';
 
-  const ts = document.getElementById('tab-single');
-  const tb = document.getElementById('tab-batch');
-  const activeStyle  = 'background:var(--bg2);color:var(--text);border:2px solid var(--border)';
-  const inactiveStyle= 'background:transparent;color:var(--text2);border:2px solid transparent';
-  ts.style.cssText += ';' + (isSingle ? activeStyle  : inactiveStyle);
-  tb.style.cssText += ';' + (isSingle ? inactiveStyle : activeStyle);
+  Object.keys(panels).forEach(key => {
+    const panel = document.getElementById(panels[key]);
+    const tabEl = document.getElementById(tabs[key]);
+    if(panel) panel.style.display = key === tab ? 'block' : 'none';
+    if(tabEl) { tabEl.style.cssText = tabEl.style.cssText + ';' + (key === tab ? activeStyle : inactiveStyle); }
+  });
+
+  if(tab === 'installment') updateInstallmentPreview();
 }
 
+// ── Parcelamento ──────────────────────────────────────────────────
+function updateInstallmentPreview() {
+  const total    = parseInt(document.getElementById('inst-total')?.value) || 0;
+  const amount   = parseFloat(document.getElementById('inst-amount')?.value) || 0;
+  const dateVal  = document.getElementById('inst-date')?.value;
+  const previewEl = document.getElementById('inst-preview-rows');
+  const totalEl   = document.getElementById('inst-preview-total');
+  const btnCount  = document.getElementById('inst-btn-count');
+  if(!previewEl) return;
+
+  if(!total || !amount || !dateVal) {
+    previewEl.innerHTML = '<span style="color:var(--text3);font-size:12px">Preencha os campos acima para ver a prévia.</span>';
+    if(totalEl) totalEl.textContent = '';
+    if(btnCount) btnCount.textContent = '0';
+    return;
+  }
+
+  const rows = [];
+  for(let i = 0; i < total; i++) {
+    const d = new Date(dateVal + 'T12:00:00');
+    d.setMonth(d.getMonth() + i);
+    const dateStr = d.toISOString().slice(0,10);
+    rows.push({ num: i+1, date: dateStr, amount });
+  }
+
+  previewEl.innerHTML = rows.map(r => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:var(--bg2);border-radius:8px;font-size:12px">
+      <span style="color:var(--text3);font-family:var(--font-mono);min-width:40px">${r.num}/${total}</span>
+      <span style="color:var(--text2)">${Utils.fmtDate(r.date)}</span>
+      <span style="color:var(--red);font-family:var(--font-mono);font-weight:700">${Utils.fmt(r.amount)}</span>
+    </div>`).join('');
+
+  const totalValue = amount * total;
+  if(totalEl) totalEl.innerHTML = `Total: <span style="font-family:var(--font-mono);color:var(--red)">${Utils.fmt(totalValue)}</span> em ${total} parcelas`;
+  if(btnCount) btnCount.textContent = total;
+}
+
+function saveInstallments() {
+  const desc   = document.getElementById('inst-desc')?.value.trim();
+  const total  = parseInt(document.getElementById('inst-total')?.value) || 0;
+  const amount = parseFloat(document.getElementById('inst-amount')?.value) || 0;
+  const date   = document.getElementById('inst-date')?.value;
+  const cat    = document.getElementById('inst-cat')?.value;
+
+  if(!desc)   return Toast.show('Informe a descrição','red');
+  if(!amount) return Toast.show('Informe o valor da parcela','red');
+  if(!total || total < 2) return Toast.show('Informe ao menos 2 parcelas','red');
+  if(!date)   return Toast.show('Informe a data da 1ª parcela','red');
+
+  const transactions = [];
+  for(let i = 0; i < total; i++) {
+    const d = new Date(date + 'T12:00:00');
+    d.setMonth(d.getMonth() + i);
+    transactions.push({
+      id: Utils.uid(),
+      type: 'saida',
+      description: desc,
+      amount,
+      category: cat,
+      date: d.toISOString().slice(0,10),
+      installment: `${i+1}/${total}`,
+      note: 'Parcelamento automático'
+    });
+  }
+
+  Store.update(s => transactions.forEach(t => s.transactions.push(t)));
+  Modal.close();
+  Toast.show(`✅ ${total} parcelas de ${Utils.fmt(amount)} criadas!`);
+}
+
+// ── Lote ───────────────────────────────────────────────────────────
 let batchRowCount = 0;
 
 function addBatchRow() {
@@ -2783,6 +3403,14 @@ function buildNav() {
   }
   if(s.settings.accentColor && s.settings.accentColor !== '#6c63ff') {
     setAccent(s.settings.accentColor);
+  }
+
+  // Notificar recorrências pendentes
+  const pendingCount = Recurrences.pendingThisMonth().length;
+  if(pendingCount > 0) {
+    setTimeout(() => {
+      Toast.show(`🔁 ${pendingCount} lançamento${pendingCount!==1?'s':''} recorrente${pendingCount!==1?'s':''} pendente${pendingCount!==1?'s':''} este mês. Acesse Lançamentos para lançar.`, 'blue');
+    }, 800);
   }
 
   Router.render('dashboard');
