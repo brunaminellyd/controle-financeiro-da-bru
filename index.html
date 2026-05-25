@@ -470,6 +470,74 @@ nav{flex:1;overflow-y:auto;padding:10px 0}
 .icon-btn{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 9px;color:var(--text2);cursor:pointer;transition:all .15s;font-size:14px}
 .icon-btn:hover{background:var(--bg4);color:var(--text)}
 </style>
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp }              from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getFirestore, doc, setDoc, onSnapshot, getDoc }
+                                          from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey:            "AIzaSyB9wxaDU7yqbhZKnwwydziHOBZEA39KWyw",
+      authDomain:        "controle-financeiro-bru.firebaseapp.com",
+      projectId:         "controle-financeiro-bru",
+      storageBucket:     "controle-financeiro-bru.firebasestorage.app",
+      messagingSenderId: "160837396711",
+      appId:             "1:160837396711:web:3d654a137a17d3b2cb9a42"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+    const DOC = doc(db, 'financas', 'bru');
+
+    // Expõe funções pro Store usar
+    window._fbSave = async (data) => {
+      const dot   = document.getElementById('sync-dot');
+      const label = document.getElementById('sync-label');
+      if(dot)   dot.style.background   = '#f5b800';
+      if(label) label.textContent      = 'salvando...';
+      try {
+        await setDoc(DOC, { payload: JSON.stringify(data), updatedAt: Date.now() });
+        if(dot)   dot.style.background = '#22d3a0';
+        if(label) label.textContent    = 'sincronizado ✓';
+        setTimeout(() => {
+          if(dot)   dot.style.background = 'var(--text3)';
+          if(label) label.textContent    = 'online';
+        }, 3000);
+      } catch(e) {
+        console.warn('Firebase save error', e);
+        if(dot)   dot.style.background = '#ff4d6a';
+        if(label) label.textContent    = 'sem conexão';
+      }
+    };
+
+    window._fbListen = (callback) => {
+      onSnapshot(DOC, (snap) => {
+        if (snap.exists()) {
+          try {
+            const data = JSON.parse(snap.data().payload);
+            callback(data);
+          } catch(e) { console.warn('Firebase parse error', e); }
+        }
+      });
+    };
+
+    window._fbLoaded = true;
+
+    // Escuta mudanças em tempo real (ex: celular e computador abertos juntos)
+    onSnapshot(DOC, (snap) => {
+      if (!snap.exists()) return;
+      try {
+        const remote = JSON.parse(snap.data().payload);
+        const remoteTs = snap.data().updatedAt || 0;
+        // Só aplica se o remoto for mais recente que o local
+        if (remoteTs > (window._lastLocalSave || 0)) {
+          window._applyRemoteData && window._applyRemoteData(remote);
+        }
+      } catch(e) {}
+    });
+
+    console.log('🔥 Firebase conectado!');
+  </script>
 </head>
 <body>
 
@@ -496,6 +564,10 @@ nav{flex:1;overflow-y:auto;padding:10px 0}
     <div id="topbar">
       <button class="icon-btn" onclick="toggleSidebar()" title="Menu">☰</button>
       <span class="page-title" id="page-title">Dashboard</span>
+      <span id="sync-indicator" style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px" title="Sincronização Firebase">
+        <span id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:var(--text3);display:inline-block"></span>
+        <span id="sync-label">local</span>
+      </span>
       <button class="top-btn" onclick="showModal('quick-add-modal')">＋ Lançamento</button>
       <button class="top-btn" onclick="showPage('backup')">💾 Backup</button>
     </div>
@@ -539,6 +611,7 @@ const Store = (() => {
   };
 
   let state = JSON.parse(JSON.stringify(defaults));
+  let syncTimeout = null;
 
   function load() {
     try {
@@ -550,10 +623,21 @@ const Store = (() => {
     } catch(e) { console.warn('Load error', e); }
   }
 
+  function saveLocal() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    catch(e) { console.warn('Save error', e); }
+  }
+
+  // Salva local + Firebase (debounce 800ms para não bater muito)
   function save() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch(e) { console.warn('Save error', e); }
+    saveLocal();
+    clearTimeout(syncTimeout);
+    syncTimeout = setTimeout(() => {
+      if (window._fbSave) {
+        window._lastLocalSave = Date.now();
+        window._fbSave(state);
+      }
+    }, 800);
   }
 
   function get() { return state; }
@@ -563,6 +647,17 @@ const Store = (() => {
     save();
     if (Router.currentPage) Router.render(Router.currentPage);
   }
+
+  // Chamado quando chega atualização do Firebase (outro dispositivo)
+  window._applyRemoteData = (remote) => {
+    const merged = { ...defaults, ...remote };
+    // Só atualiza se for diferente do estado atual
+    if (JSON.stringify(merged) === JSON.stringify(state)) return;
+    state = merged;
+    saveLocal();
+    if (Router.currentPage) Router.render(Router.currentPage);
+    Toast.show('🔄 Dados sincronizados!', 'blue');
+  };
 
   function exportJSON() {
     const blob = new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'});
@@ -591,7 +686,17 @@ const Store = (() => {
     Toast.show('🔄 Dados resetados', 'yellow');
   }
 
+  // Carrega local primeiro, depois Firebase em background
   load();
+
+  // Tenta carregar do Firebase após 1s (deixa o app iniciar primeiro)
+  setTimeout(() => {
+    if (!window._fbLoaded) return;
+    // Firebase listener já configurado no módulo acima via onSnapshot
+    // Aqui só mostra indicador de conexão
+    Toast.show('🔥 Sincronização ativa!', 'blue');
+  }, 1500);
+
   return { get, update, save, exportJSON, importJSON, reset };
 })();
 
